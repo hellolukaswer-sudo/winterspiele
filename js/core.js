@@ -190,7 +190,9 @@
   async function boot() {
     ['#btn-home1', '#btn-home2', '#btn-home3'].forEach(s => $(s).onclick = () => { history.replaceState(null, '', location.pathname); renderHome(); });
     // Schlüssel aus dem QR-Link (#k=…) übernehmen und auf dem Gerät merken
-    const hk = new URLSearchParams(location.hash.slice(1)).get('k');
+    // Link-Format: …/?TOKEN#SCHLÜSSEL  (alte Form ?t=…#k=… geht auch)
+    const hraw = location.hash.slice(1);
+    const hk = hraw ? (new URLSearchParams(hraw).get('k') || (hraw.includes('=') ? null : hraw)) : null;
     if (hk) { try { localStorage.setItem(KK, hk); } catch (e) {} }
     let key = hk; if (!key) { try { key = localStorage.getItem(KK); } catch (e) {} }
     if (location.hash) history.replaceState(null, '', location.pathname + location.search);
@@ -201,7 +203,7 @@
 
     const ok = await loadAssets(key);
     document.body.classList.toggle('nokey', !ok);
-    const tok = params.get('t');
+    const tok = params.get('t') || [...params.keys()].find(k => C.tokens[k]);
     const day = tok ? C.tokens[tok] : 0;
     if (!day) return renderHome();
     const r = state.results[day];
