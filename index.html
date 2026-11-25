@@ -3,13 +3,14 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
-<meta name="theme-color" content="#0f2a1f">
+<meta name="theme-color" content="#0c1f17">
 <meta name="robots" content="noindex, nofollow">
 <meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <title>Adventskalender</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700;12..96,800&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
@@ -19,33 +20,35 @@
 <section id="s-home" class="screen">
   <header class="home-head">
     <div class="faces-row" id="home-faces"></div>
-    <h1>Adventskalender</h1>
+    <p class="eyebrow">Adventskalender 2026</p>
+    <h1>Für <span id="home-name"></span></h1>
     <p class="sub" id="home-sub"></p>
+    <div class="stats" id="home-stats"></div>
   </header>
   <div id="admin-bar" class="admin-bar hidden"></div>
   <div class="grid" id="doors"></div>
   <div class="card wins" id="wins"></div>
-  <p class="foot">Jeden Tag ein QR-Code · ein Spiel · <b>nur ein Versuch</b></p>
+  <p class="foot">Grün = gewonnen · Rot = Trostpreis</p>
 </section>
 
 <!-- Intro vor dem Spiel -->
 <section id="s-intro" class="screen hidden">
   <div class="photo-hero" id="intro-photo"><div class="day-badge" id="intro-day"></div></div>
-  <div class="card">
+  <div class="card sheet">
     <div class="game-emoji" id="intro-emoji"></div>
     <h2 id="intro-title"></h2>
     <p class="rules" id="intro-rules"></p>
     <div class="goal" id="intro-goal"></div>
     <div class="stake" id="intro-stake"></div>
-    <p class="warn">⚠️ Nur <b>ein</b> Versuch. Neu laden oder App verlassen zählt als verloren.</p>
-    <button class="btn big" id="btn-start">Los geht's!</button>
-    <button class="btn ghost" id="btn-home1">Zum Kalender</button>
+    <p class="warn">Nur <b>ein</b> Versuch. Neu laden oder die App verlassen zählt als verloren.</p>
+    <button class="btn big" id="btn-start">Los geht's</button>
+    <button class="btn ghost" id="btn-home1">Zurück zum Kalender</button>
   </div>
 </section>
 
 <!-- Spiel -->
 <section id="s-game" class="screen hidden">
-  <div class="hud"><span id="hud-l"></span><span id="hud-t"></span><span id="hud-r"></span></div>
+  <div class="hud"><span id="hud-l" class="pill"></span><span id="hud-t"></span><span id="hud-r" class="pill"></span></div>
   <div id="stage"></div>
   <div id="overlay" class="overlay hidden"></div>
 </section>
@@ -54,7 +57,7 @@
 <section id="s-result" class="screen hidden">
   <canvas id="confetti"></canvas>
   <div class="photo-hero small" id="res-photo"></div>
-  <div class="card">
+  <div class="card sheet">
     <div class="res-emoji" id="res-emoji"></div>
     <h2 id="res-title"></h2>
     <p id="res-msg"></p>

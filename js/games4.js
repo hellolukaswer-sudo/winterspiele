@@ -3,19 +3,21 @@
 // ---------- 19: Keks-Ninja ----------
 GAMES[19] = {
   title: 'Keks-Ninja', emoji: '🥷',
-  rules: 'Kekse fliegen hoch – wisch mit dem Finger durch, um sie zu zerschneiden! Bloß keine Bombe 💣 erwischen. Lässt du 3 Kekse fallen, ist es vorbei.',
-  goal: '30 Kekse zerschneiden',
+  rules: 'Süßigkeiten fliegen hoch. Wisch mit dem Finger durch, um sie zu zerschneiden! Bloß keine Bombe 💣 erwischen (rot leuchtend). Lässt du 3 Süßigkeiten fallen, ist es vorbei.',
+  goal: '30 Süßigkeiten zerschneiden',
   play(api) {
     const GOAL = 30, MAXMISS = 3;
     const { ctx, W, H } = api;
     let cut = 0, miss = 0, t = 0, waveT = 0.6, last = null;
-    const items = [], trail = [], parts = [];
+    const items = [], trail = [], parts = [], pops = [];
     const G = 520;
-    const upd = () => api.hud(`🍪 ${cut}/${GOAL}`, '❌'.repeat(miss) + '⚪'.repeat(MAXMISS - miss));
+    const kinds = [['🍪', '#f2b84b'], ['🧁', '#ff8fab'], ['🍩', '#ff8fab'], ['🍭', '#c084fc'], ['🍓', '#ef4444'], ['🍊', '#fb923c'], ['🍬', '#38bdf8']];
+    const upd = () => api.hud(`🍪 ${cut}/${GOAL}`, '❤️'.repeat(MAXMISS - miss) + '🤍'.repeat(miss));
     upd();
     const throwOne = bomb => {
       const x = rnd(W * 0.15, W * 0.85), vy = -rnd(Math.sqrt(2 * G * H * 0.55), Math.sqrt(2 * G * H * 0.8));
-      items.push({ x, y: H + 30, vx: (W / 2 - x) * rnd(0.2, 0.6), vy, r: 26, bomb, e: bomb ? '💣' : pick(['🍪', '🍪', '🧁', '🍩', '🥨']), rot: 0, vr: rnd(-3, 3) });
+      const k = pick(kinds);
+      items.push({ x, y: H + 30, vx: (W / 2 - x) * rnd(0.2, 0.6), vy, r: 27, bomb, e: bomb ? '💣' : k[0], c: bomb ? '#ef4444' : k[1], rot: 0, vr: rnd(-3, 3) });
     };
     const segHit = (ax, ay, bx, by, cx, cy, r) => {
       const dx = bx - ax, dy = by - ay, l2 = dx * dx + dy * dy || 1;
@@ -26,13 +28,15 @@ GAMES[19] = {
     api.on('up', () => { last = null; });
     api.on('move', (x, y, d) => {
       if (!d || !last) return;
-      trail.push({ x, y, life: 0.18 });
+      trail.push({ x, y, life: 0.2 });
       for (let i = items.length - 1; i >= 0; i--) {
         const it = items[i];
         if (segHit(last.x, last.y, x, y, it.x, it.y, it.r)) {
           items.splice(i, 1);
-          if (it.bomb) { return api.end(false, `💥 Bombe! ${cut} Kekse geschafft`); }
-          cut++; upd(); for (let k = 0; k < 6; k++) parts.push({ x: it.x, y: it.y, vx: rnd(-160, 160), vy: rnd(-200, 50), life: 0.5 });
+          if (it.bomb) { return api.end(false, `💥 Bombe! ${cut} geschafft`); }
+          cut++; upd();
+          for (let k = 0; k < 10; k++) parts.push({ x: it.x, y: it.y, vx: rnd(-220, 220), vy: rnd(-260, 40), life: 0.6, c: it.c });
+          pops.push({ x: it.x, y: it.y, life: 0.4 });
           if (cut >= GOAL) return api.end(true);
         }
       }
@@ -48,21 +52,31 @@ GAMES[19] = {
       }
       for (let i = items.length - 1; i >= 0; i--) {
         const it = items[i]; it.vy += G * dt; it.x += it.vx * dt; it.y += it.vy * dt; it.rot += it.vr * dt;
-        if (it.vy > 0 && it.y > H + 40) { items.splice(i, 1); if (!it.bomb) { miss++; upd(); if (miss >= MAXMISS) return api.end(false, `${cut} von ${GOAL} Keksen`); } }
+        if (it.vy > 0 && it.y > H + 40) { items.splice(i, 1); if (!it.bomb) { miss++; upd(); api.flash('Verpasst!', 400); if (miss >= MAXMISS) return api.end(false, `${cut} von ${GOAL} geschafft`); } }
       }
-      api.bg('#3b2414', '#1a0f08');
-      for (const it of items) api.emoji(it.e, it.x, it.y, it.r * 2, it.rot);
-      for (let i = parts.length - 1; i >= 0; i--) { const p = parts[i]; p.life -= dt; p.vy += 600 * dt; p.x += p.vx * dt; p.y += p.vy * dt; if (p.life <= 0) { parts.splice(i, 1); continue; } ctx.fillStyle = '#d9a35b'; ctx.fillRect(p.x, p.y, 5, 5); }
+      api.bg('#1e3a8a', '#0b1230');
+      ctx.fillStyle = 'rgba(255,255,255,.35)'; for (let i = 0; i < 40; i++) ctx.fillRect((i * 97) % W, (i * 61 + t * 12) % H, 2, 2);
+      for (const it of items) {
+        const g = ctx.createRadialGradient(it.x, it.y, 4, it.x, it.y, it.r * 1.35);
+        g.addColorStop(0, it.bomb ? 'rgba(239,68,68,.55)' : 'rgba(255,255,255,.45)'); g.addColorStop(1, 'rgba(255,255,255,0)');
+        ctx.fillStyle = g; ctx.beginPath(); ctx.arc(it.x, it.y, it.r * 1.35, 0, 7); ctx.fill();
+        api.emoji(it.e, it.x, it.y, it.r * 2, it.rot);
+      }
+      for (let i = parts.length - 1; i >= 0; i--) { const p = parts[i]; p.life -= dt; p.vy += 700 * dt; p.x += p.vx * dt; p.y += p.vy * dt; if (p.life <= 0) { parts.splice(i, 1); continue; } ctx.fillStyle = p.c; ctx.beginPath(); ctx.arc(p.x, p.y, 4, 0, 7); ctx.fill(); }
+      for (let i = pops.length - 1; i >= 0; i--) { const p = pops[i]; p.life -= dt; if (p.life <= 0) { pops.splice(i, 1); continue; } ctx.globalAlpha = p.life * 2.5; api.text('+1', p.x, p.y - (0.4 - p.life) * 80, 22, '#fde68a'); ctx.globalAlpha = 1; }
       for (let i = trail.length - 1; i >= 0; i--) { trail[i].life -= dt; if (trail[i].life <= 0) trail.splice(i, 1); }
-      if (trail.length > 1) { ctx.strokeStyle = '#fff'; ctx.lineWidth = 5; ctx.lineCap = 'round'; ctx.beginPath(); ctx.moveTo(trail[0].x, trail[0].y); trail.forEach(p => ctx.lineTo(p.x, p.y)); ctx.stroke(); }
+      if (trail.length > 1) {
+        ctx.save(); ctx.shadowColor = '#bae6fd'; ctx.shadowBlur = 14; ctx.strokeStyle = '#fff'; ctx.lineWidth = 6; ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+        ctx.beginPath(); ctx.moveTo(trail[0].x, trail[0].y); trail.forEach(p => ctx.lineTo(p.x, p.y)); ctx.stroke(); ctx.restore();
+      }
     });
   },
 };
 
-// ---------- 20: Zielscheibe ----------
+// ---------- 20: Mistelzweig-Schütze ----------
 GAMES[20] = {
   title: 'Mistelzweig-Schütze', emoji: '🎯',
-  rules: 'Lukas düst über den Bildschirm. Tippe ihn an, um ihm einen Mistelzweig-Kuss zu verpassen! Jeder Tipp zählt als Schuss – daneben ist verschwendet.',
+  rules: 'Zwei Lukasse gleiten über den Bildschirm und prallen von den Rändern ab. Tippe sie an, um ihnen einen Kuss zu verpassen! Jeder Tipp ist ein Schuss, daneben ist verschwendet. Mit jedem Treffer werden sie kleiner und schneller.',
   goal: '15 Treffer mit max. 20 Schüssen in 30 s',
   play(api) {
     const GOAL = 15, SHOTS = 20, TIME = 30;
@@ -70,8 +84,9 @@ GAMES[20] = {
     let hits = 0, shots = 0;
     const targets = [], marks = [];
     const spawn = () => {
-      const r = Math.max(19, 36 - hits * 1.2), sp = 150 + hits * 13, a = rnd(0, Math.PI * 2);
-      targets.push({ x: rnd(r, W - r), y: rnd(r + 10, H - r - 10), vx: Math.cos(a) * sp, vy: Math.sin(a) * sp, r, face: api.face('er'), turn: rnd(0.4, 1.2) });
+      const r = Math.max(20, 38 - hits * 1.2), sp = 120 + hits * 11;
+      let a = rnd(0, Math.PI * 2); if (Math.abs(Math.cos(a)) < 0.3) a += 0.6; // nicht zu senkrecht
+      targets.push({ x: rnd(r, W - r), y: rnd(r + 10, H - r - 10), vx: Math.cos(a) * sp, vy: Math.sin(a) * sp, r, face: api.face('er') });
     };
     spawn(); spawn();
     const timer = gameTimer(api, TIME, () => api.end(false, `${hits} von ${GOAL} Treffern`));
@@ -80,7 +95,7 @@ GAMES[20] = {
       if (api.ended) return;
       shots++;
       let hit = false;
-      for (let i = targets.length - 1; i >= 0; i--) if (dist(x, y, targets[i].x, targets[i].y) < targets[i].r + 6) {
+      for (let i = targets.length - 1; i >= 0; i--) if (dist(x, y, targets[i].x, targets[i].y) < targets[i].r + 8) {
         targets.splice(i, 1); hits++; hit = true; marks.push({ x, y, e: '💋', life: 0.6 }); spawn(); break;
       }
       if (!hit) marks.push({ x, y, e: '💨', life: 0.4 });
@@ -88,70 +103,120 @@ GAMES[20] = {
       if (hits >= GOAL) return api.end(true, `${hits} Treffer mit ${shots} Schüssen`);
       if (shots >= SHOTS) return api.end(false, `Keine Schüsse mehr – ${hits} Treffer`);
     });
-    api.loop(dt => {
+    api.loop((dt, t) => {
       timer.tick(dt); if (api.ended) return; upd();
-      for (const t of targets) {
-        t.turn -= dt; if (t.turn <= 0) { const sp = Math.hypot(t.vx, t.vy), a = Math.atan2(t.vy, t.vx) + rnd(-1.4, 1.4); t.vx = Math.cos(a) * sp; t.vy = Math.sin(a) * sp; t.turn = rnd(0.4, 1.1); }
-        t.x += t.vx * dt; t.y += t.vy * dt;
-        if (t.x < t.r) { t.x = t.r; t.vx = Math.abs(t.vx); } if (t.x > W - t.r) { t.x = W - t.r; t.vx = -Math.abs(t.vx); }
-        if (t.y < t.r) { t.y = t.r; t.vy = Math.abs(t.vy); } if (t.y > H - t.r) { t.y = H - t.r; t.vy = -Math.abs(t.vy); }
+      for (const g of targets) {
+        g.x += g.vx * dt; g.y += g.vy * dt;
+        if (g.x < g.r) { g.x = g.r; g.vx = Math.abs(g.vx); } if (g.x > W - g.r) { g.x = W - g.r; g.vx = -Math.abs(g.vx); }
+        if (g.y < g.r) { g.y = g.r; g.vy = Math.abs(g.vy); } if (g.y > H - g.r) { g.y = H - g.r; g.vy = -Math.abs(g.vy); }
       }
-      api.bg('#173d2c', '#0a1f16');
-      for (let i = 0; i < 5; i++) { ctx.strokeStyle = '#ffffff0d'; ctx.lineWidth = 18; ctx.beginPath(); ctx.arc(W / 2, H / 2, 40 + i * 60, 0, 7); ctx.stroke(); }
-      for (const t of targets) { api.drawFace(t.face, t.x, t.y, t.r, '#d7263d', 3); api.emoji('🌿', t.x + t.r * 0.7, t.y - t.r * 0.8, t.r * 0.7); }
-      for (let i = marks.length - 1; i >= 0; i--) { const m = marks[i]; m.life -= dt; if (m.life <= 0) { marks.splice(i, 1); continue; } ctx.globalAlpha = m.life * 2; api.emoji(m.e, m.x, m.y, 30); ctx.globalAlpha = 1; }
+      api.bg('#14532d', '#062014');
+      for (let i = 0; i < 5; i++) { ctx.strokeStyle = 'rgba(255,255,255,.05)'; ctx.lineWidth = 18; ctx.beginPath(); ctx.arc(W / 2, H / 2, 40 + i * 60, 0, 7); ctx.stroke(); }
+      for (const g of targets) {
+        ctx.fillStyle = 'rgba(0,0,0,.25)'; ctx.beginPath(); ctx.ellipse(g.x + 4, g.y + g.r + 4, g.r * 0.8, g.r * 0.25, 0, 0, 7); ctx.fill();
+        api.drawFace(g.face, g.x, g.y, g.r, '#ef4444', 3); api.emoji('🌿', g.x + g.r * 0.7, g.y - g.r * 0.8, g.r * 0.7);
+      }
+      for (let i = marks.length - 1; i >= 0; i--) { const m = marks[i]; m.life -= dt; if (m.life <= 0) { marks.splice(i, 1); continue; } ctx.globalAlpha = Math.min(1, m.life * 2); api.emoji(m.e, m.x, m.y, 30); ctx.globalAlpha = 1; }
     });
   },
 };
 
-// ---------- 21: Weihnachts-Invasion ----------
+// ---------- 21: Grinch-Invasion ----------
 GAMES[21] = {
   title: 'Grinch-Invasion', emoji: '👾',
-  rules: 'Die Grinch-Monster wollen Weihnachten klauen! Zieh dich nach links und rechts – du schießt automatisch. Weich ihren Schneeflocken aus (3 Leben). Kommen sie ganz unten an, ist alles verloren.',
-  goal: '3 Angriffswellen besiegen',
+  rules: 'Die Grinch-Bande will Weihnachten klauen! Zieh den Finger nach links und rechts, du schießt automatisch Sterne. Weich den Schneebällen aus (3 Leben). Besiege 2 Wellen und danach den Ober-Grinch. Kommen sie ganz runter, ist alles verloren.',
+  goal: '2 Wellen + Ober-Grinch besiegen',
   play(api) {
-    const WAVES = 3;
     const { ctx, W, H } = api;
-    const R = 20; let x = W / 2, target = W / 2, lives = 3, wave = 0, fireT = 0, inv = 0;
-    const py = H - 50;
-    let enemies = [], bullets = [], drops = [], dir = 1, edx = 0;
-    const face = api.face('sie');
-    const startWave = () => {
-      wave++; enemies = []; dir = 1;
-      const cols = 5, rows = 2 + wave, sx = W / (cols + 1);
-      for (let j = 0; j < rows; j++) for (let i = 0; i < cols; i++) enemies.push({ x: sx * (i + 1), y: 50 + j * 42, e: ['👾', '👹', '🤖', '👺'][j % 4] });
-      api.flash(`Welle ${wave}`, 800);
+    const R = 22, py = H - 74;
+    let x = W / 2, target = W / 2, lives = 3, inv = 0, fireT = 0, stage = 0, banner = 0, bannerText = '', t = 0, shake = 0;
+    let enemies = [], shots = [], balls = [], parts = [], boss = null, dir = 1;
+    const sky = Array.from({ length: 60 }, () => ({ x: rnd(0, W), y: rnd(0, H), s: rnd(0.6, 2), v: rnd(8, 30) }));
+    const me = api.face('sie');
+    const grinch = (gx, gy, r, flash, hat = true) => {
+      ctx.save(); ctx.translate(gx, gy);
+      ctx.fillStyle = flash ? '#fff' : '#65a30d'; ctx.beginPath(); ctx.ellipse(0, 0, r, r * 0.92, 0, 0, 7); ctx.fill();
+      ctx.fillStyle = flash ? '#fff' : '#84cc16'; ctx.beginPath(); ctx.ellipse(-r * 0.25, -r * 0.3, r * 0.45, r * 0.3, -0.4, 0, 7); ctx.fill();
+      ctx.fillStyle = '#fde047'; [-1, 1].forEach(s => { ctx.beginPath(); ctx.ellipse(s * r * 0.35, -r * 0.12, r * 0.22, r * 0.16, s * 0.3, 0, 7); ctx.fill(); });
+      ctx.fillStyle = '#b91c1c'; [-1, 1].forEach(s => { ctx.beginPath(); ctx.arc(s * r * 0.35, -r * 0.1, r * 0.08, 0, 7); ctx.fill(); });
+      ctx.strokeStyle = '#1a2e05'; ctx.lineWidth = Math.max(2, r * 0.08); ctx.lineCap = 'round';
+      [-1, 1].forEach(s => { ctx.beginPath(); ctx.moveTo(s * r * 0.55, -r * 0.42); ctx.lineTo(s * r * 0.15, -r * 0.28); ctx.stroke(); });
+      ctx.beginPath(); ctx.arc(0, r * 0.12, r * 0.5, 0.25, Math.PI - 0.25); ctx.stroke();
+      if (hat) {
+        ctx.fillStyle = '#dc2626'; ctx.beginPath(); ctx.moveTo(-r * 0.6, -r * 0.7); ctx.lineTo(r * 0.55, -r * 0.75); ctx.lineTo(r * 0.9, -r * 1.45); ctx.closePath(); ctx.fill();
+        ctx.fillStyle = '#fff'; ctx.fillRect(-r * 0.68, -r * 0.82, r * 1.3, r * 0.18); ctx.beginPath(); ctx.arc(r * 0.92, -r * 1.45, r * 0.16, 0, 7); ctx.fill();
+      }
+      ctx.restore();
     };
-    startWave();
-    const upd = () => api.hud(`Welle ${wave}/${WAVES}`, '❤️'.repeat(lives));
-    upd();
+    const burst = (bx, by, c, n = 14) => { for (let i = 0; i < n; i++) { const a = rnd(0, 7), s = rnd(60, 260); parts.push({ x: bx, y: by, vx: Math.cos(a) * s, vy: Math.sin(a) * s, life: rnd(0.3, 0.7), c }); } };
+    const startStage = () => {
+      stage++; shots = []; balls = []; dir = 1; banner = 1.3;
+      if (stage <= 2) {
+        bannerText = `Welle ${stage}`;
+        const cols = 5, rows = 2 + stage, sx = (W - 60) / (cols - 1);
+        for (let j = 0; j < rows; j++) for (let i = 0; i < cols; i++) enemies.push({ x: 30 + sx * i, y: 70 + j * 46, r: 16, hit: 0 });
+      } else { bannerText = 'Der Ober-Grinch!'; boss = { x: W / 2, y: 120, r: 46, hp: 32, max: 32, hit: 0, fire: 1.5 }; }
+      upd();
+    };
+    const upd = () => api.hud(stage <= 2 ? `Welle ${stage}/2` : 'Endgegner', '❤️'.repeat(Math.max(0, lives)));
+    const hurt = () => {
+      if (inv > 0) return; lives--; inv = 1.3; shake = 0.3; upd(); burst(x, py, '#fca5a5', 18);
+      if (lives <= 0) api.end(false, stage <= 2 ? `Besiegt in Welle ${stage}` : 'Der Ober-Grinch war zu stark');
+    };
+    startStage();
     api.on('down', px => target = px); api.on('move', (px, py2, d) => { if (d) target = px; });
     api.loop(dt => {
+      t += dt; inv -= dt; shake = Math.max(0, shake - dt); banner -= dt;
       x += (target - x) * Math.min(1, dt * 14); x = clamp(x, R, W - R);
-      inv -= dt;
-      fireT -= dt; if (fireT <= 0) { fireT = 0.3; bullets.push({ x, y: py - R }); }
-      const sp = (36 + wave * 12) * (1 + (1 - enemies.length / 15) * 1.3);
-      let hitEdge = false;
-      for (const e of enemies) { e.x += dir * sp * dt; if (e.x < 18 || e.x > W - 18) hitEdge = true; }
-      if (hitEdge) { dir *= -1; for (const e of enemies) { e.y += 16; e.x = clamp(e.x, 18, W - 18); } }
-      if (enemies.some(e => e.y > py - 30)) return api.end(false, `Sie sind durchgekommen (Welle ${wave})`);
-      if (enemies.length && Math.random() < dt * (0.9 + wave * 0.45)) { const e = pick(enemies); drops.push({ x: e.x, y: e.y + 14, vy: 190 + wave * 30 }); }
-      for (let i = bullets.length - 1; i >= 0; i--) {
-        const b = bullets[i]; b.y -= 520 * dt; if (b.y < -10) { bullets.splice(i, 1); continue; }
-        const k = enemies.findIndex(e => Math.abs(e.x - b.x) < 17 && Math.abs(e.y - b.y) < 16);
-        if (k >= 0) { enemies.splice(k, 1); bullets.splice(i, 1); }
+      fireT -= dt; if (fireT <= 0 && banner < 0.6) { fireT = 0.27; shots.push({ x, y: py - R }); }
+      // Gegner-Formation
+      if (enemies.length) {
+        const sp = (40 + stage * 14) * (1 + (1 - enemies.length / 20) * 1.2);
+        let edge = false;
+        for (const e of enemies) { e.x += dir * sp * dt; if (e.x < e.r + 4 || e.x > W - e.r - 4) edge = true; e.hit -= dt; }
+        if (edge) { dir *= -1; for (const e of enemies) { e.y += 16; e.x = clamp(e.x, e.r + 4, W - e.r - 4); } }
+        if (enemies.some(e => e.y > py - 34)) return api.end(false, 'Sie sind bis zu dir durchgekommen');
+        if (banner < 0 && Math.random() < dt * (1.0 + stage * 0.5)) { const e = pick(enemies); balls.push({ x: e.x, y: e.y + 16, vx: 0, vy: 200 + stage * 30 }); }
       }
-      if (!enemies.length) { if (wave >= WAVES) return api.end(true, 'Weihnachten ist gerettet!'); startWave(); upd(); bullets = []; drops = []; }
-      for (let i = drops.length - 1; i >= 0; i--) {
-        const d = drops[i]; d.y += d.vy * dt; if (d.y > H + 10) { drops.splice(i, 1); continue; }
-        if (inv <= 0 && dist(d.x, d.y, x, py) < R * 0.85) { drops.splice(i, 1); lives--; inv = 1.2; upd(); if (lives <= 0) return api.end(false, `Erwischt in Welle ${wave}`); api.flash('Autsch!', 400); }
+      if (boss) {
+        boss.x = W / 2 + Math.sin(t * (boss.hp < boss.max / 2 ? 1.6 : 1.1)) * (W / 2 - boss.r - 10); boss.hit -= dt;
+        boss.fire -= dt;
+        if (boss.fire <= 0 && banner < 0) {
+          boss.fire = boss.hp < boss.max / 2 ? 0.8 : 1.15;
+          const a0 = Math.atan2(py - boss.y, x - boss.x);
+          for (const da of [-0.3, 0, 0.3]) balls.push({ x: boss.x, y: boss.y + boss.r * 0.6, vx: Math.cos(a0 + da) * 220, vy: Math.sin(a0 + da) * 220 });
+        }
       }
-      api.bg('#0b0f2a', '#1b1340');
-      ctx.fillStyle = '#ffffff55'; for (let i = 0; i < 40; i++) ctx.fillRect((i * 83) % W, (i * 137 + performance.now() / 30) % H, 2, 2);
-      for (const e of enemies) api.emoji(e.e, e.x, e.y, 28);
-      ctx.fillStyle = '#f6c453'; for (const b of bullets) ctx.fillRect(b.x - 2, b.y - 8, 4, 12);
-      for (const d of drops) api.emoji('❄️', d.x, d.y, 16);
-      if (inv <= 0 || Math.floor(inv * 10) % 2) api.drawFace(face, x, py, R, '#2fbf71', 3);
+      // Sterne des Spielers
+      for (let i = shots.length - 1; i >= 0; i--) {
+        const s = shots[i]; s.y -= 560 * dt; if (s.y < -10) { shots.splice(i, 1); continue; }
+        const k = enemies.findIndex(e => dist(e.x, e.y, s.x, s.y) < e.r + 6);
+        if (k >= 0) { burst(enemies[k].x, enemies[k].y, '#a3e635'); enemies.splice(k, 1); shots.splice(i, 1); continue; }
+        if (boss && dist(boss.x, boss.y, s.x, s.y) < boss.r) { boss.hp--; boss.hit = 0.08; shots.splice(i, 1); burst(s.x, s.y, '#fde047', 5); if (boss.hp <= 0) { burst(boss.x, boss.y, '#a3e635', 50); return api.end(true, 'Weihnachten ist gerettet!'); } }
+      }
+      if (!enemies.length && !boss && stage < 3) startStage();
+      // Schneebälle
+      for (let i = balls.length - 1; i >= 0; i--) {
+        const b = balls[i]; b.x += b.vx * dt; b.y += b.vy * dt;
+        if (b.y > H + 10 || b.x < -10 || b.x > W + 10) { balls.splice(i, 1); continue; }
+        if (dist(b.x, b.y, x, py) < R * 0.85 + 6) { balls.splice(i, 1); hurt(); if (api.ended) return; }
+      }
+      // ---- Zeichnen ----
+      ctx.save(); if (shake > 0) ctx.translate(rnd(-4, 4), rnd(-4, 4));
+      api.bg('#0f172a', '#312e81');
+      for (const s of sky) { s.y += s.v * dt; if (s.y > H) s.y = 0; ctx.fillStyle = 'rgba(255,255,255,.7)'; ctx.fillRect(s.x, s.y, s.s, s.s); }
+      ctx.fillStyle = '#e0f2fe'; ctx.beginPath(); ctx.ellipse(W * 0.25, H + 30, W * 0.6, 70, 0, 0, 7); ctx.ellipse(W * 0.85, H + 40, W * 0.5, 70, 0, 0, 7); ctx.fill();
+      for (const e of enemies) grinch(e.x, e.y, e.r, false);
+      if (boss) {
+        grinch(boss.x, boss.y, boss.r, boss.hit > 0);
+        api.roundRect(20, 18, W - 40, 10, 5, 'rgba(255,255,255,.15)'); api.roundRect(20, 18, (W - 40) * boss.hp / boss.max, 10, 5, '#84cc16');
+      }
+      for (const s of shots) { ctx.save(); ctx.shadowColor = '#fde047'; ctx.shadowBlur = 10; api.emoji('⭐', s.x, s.y, 16); ctx.restore(); }
+      for (const b of balls) { ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(b.x, b.y, 7, 0, 7); ctx.fill(); ctx.strokeStyle = '#93c5fd'; ctx.lineWidth = 2; ctx.stroke(); }
+      for (let i = parts.length - 1; i >= 0; i--) { const p = parts[i]; p.life -= dt; if (p.life <= 0) { parts.splice(i, 1); continue; } p.x += p.vx * dt; p.y += p.vy * dt; ctx.globalAlpha = Math.min(1, p.life * 2); ctx.fillStyle = p.c; ctx.fillRect(p.x - 2, p.y - 2, 4, 4); ctx.globalAlpha = 1; }
+      if (inv <= 0 || Math.floor(inv * 12) % 2) { api.emoji('🛷', x, py + R + 6, 34); api.drawFace(me, x, py, R, '#f2b84b', 3); }
+      if (banner > 0) { ctx.globalAlpha = Math.min(1, banner * 2); api.text(bannerText, W / 2, H * 0.45, 34, '#fde68a'); ctx.globalAlpha = 1; }
+      ctx.restore();
     });
   },
 };
@@ -159,25 +224,25 @@ GAMES[21] = {
 // ---------- 22: Zahlenjagd ----------
 GAMES[22] = {
   title: 'Zahlenjagd', emoji: '🔢',
-  rules: 'Tippe die Zahlen von 1 bis 25 der Reihe nach an, so schnell du kannst. Falsch getippt kostet 2 Sekunden.',
-  goal: '1 bis 25 in 36 Sekunden',
+  rules: 'Tippe die Zahlen von 1 bis 25 der Reihe nach an, so schnell du kannst. Falsch getippt kostet 3 Sekunden.',
+  goal: '1 bis 25 in 30 Sekunden',
   play(api) {
-    const TIME = 36, N = 25;
+    const TIME = 30, N = 25;
     const root = api.dom();
-    const s = Math.min((api.W - 30) / 5, (api.H - 40) / 5) - 6;
-    root.innerHTML = `<div style="display:grid;grid-template-columns:repeat(5,${s}px);gap:6px"></div>`;
+    const s = Math.floor(Math.min((api.W - 28 - 4 * 8) / 5, (api.H - 28 - 4 * 8) / 5));
+    root.innerHTML = `<div style="display:grid;grid-template-columns:repeat(5,${s}px);gap:8px"></div>`;
     const g = root.firstChild;
     let next = 1;
     const timer = gameTimer(api, TIME, () => api.end(false, `Bis ${next - 1} gekommen`));
-    const cols = ['#d7263d', '#1f7a4d', '#c9952e', '#3d7dd8'];
+    const cols = ['#e5484d', '#16a34a', '#d97706', '#2563eb', '#9333ea'];
     shuffle([...Array(N).keys()].map(i => i + 1)).forEach(v => {
       const b = document.createElement('div');
-      b.style.cssText = `width:${s}px;height:${s}px;border-radius:12px;background:${pick(cols)};display:flex;align-items:center;justify-content:center;font-size:${s * 0.42}px;font-weight:700;box-shadow:0 3px 0 #0007;transform:rotate(${rnd(-6, 6)}deg)`;
+      b.style.cssText = `width:${s}px;height:${s}px;border-radius:14px;background:${pick(cols)};display:flex;align-items:center;justify-content:center;font-family:var(--display);font-size:${Math.round(s * 0.42)}px;font-weight:800;box-shadow:0 4px 0 rgba(0,0,0,.35);transition:opacity .15s,transform .15s`;
       b.textContent = v;
       b.addEventListener('pointerdown', e => {
         e.stopPropagation(); if (api.ended) return;
-        if (v === next) { b.style.opacity = .2; next++; if (next > N) return api.end(true, `Noch ${Math.ceil(timer.left)} Sekunden übrig!`); }
-        else { timer.left -= 2; api.flash('−2s', 350); }
+        if (v === next) { b.style.opacity = .15; b.style.transform = 'scale(.9)'; next++; if (next > N) return api.end(true, `Noch ${Math.ceil(timer.left)} Sekunden übrig!`); }
+        else { timer.left -= 3; api.flash('−3s', 350); }
       });
       g.appendChild(b);
     });

@@ -224,7 +224,7 @@ GAMES[12] = {
     let hits = 0, misses = 0, p = 0, dir = 1, speed = 0.75, zone, zw = 0.22, cool = 0, lastMsg = '', fill = 0;
     const newZone = () => { zw = Math.max(0.075, 0.22 - hits * 0.017); zone = rnd(0.05, 0.95 - zw); };
     newZone();
-    const upd = () => api.hud(`🍷 ${hits}/${GOAL}`, '❌'.repeat(misses) + '⚪'.repeat(MISS - 1 - misses >= 0 ? MISS - 1 - misses : 0));
+    const upd = () => api.hud(`🍷 ${hits}/${GOAL}`, '❤️'.repeat(Math.max(0, MISS - misses)) + '🤍'.repeat(Math.min(MISS, misses)));
     upd();
     api.on('down', () => {
       if (cool > 0 || api.ended) return;

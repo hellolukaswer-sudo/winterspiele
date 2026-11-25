@@ -65,33 +65,37 @@
 
   function renderHome() {
     const faces = [C.faces.er[0], C.faces.sie[0]].filter(Boolean);
-    $('#home-faces').innerHTML = ASSETS.ok ? faces.map(f => `<img src="${f}" alt="">`).join('') : '<div style="font-size:56px">🎄</div>';
+    $('#home-faces').innerHTML = ASSETS.ok ? faces.map(f => `<img src="${f}" alt="">`).join('') : '<div class="tree">🎄</div>';
+    $('#home-name').textContent = C.herName;
     const td = todayDay();
     const n = new Date();
+    const doneList = Object.values(state.results).filter(r => r.status === 'done');
+    const wins = doneList.filter(r => r.win).length;
     if (n < opensAt(1) && !admin) {
       const days = Math.ceil((opensAt(1) - n) / 864e5);
-      $('#home-sub').textContent = `Für ${C.herName} 💛 · noch ${days} ${days === 1 ? 'Tag' : 'Tage'} bis zum ersten Türchen`;
-    } else $('#home-sub').textContent = `Für ${C.herName} 💛 · Scanne jeden Tag den QR-Code`;
+      $('#home-sub').textContent = `Noch ${days} ${days === 1 ? 'Tag' : 'Tage'}, dann öffnet sich das erste Türchen.`;
+    } else $('#home-sub').textContent = 'Jeden Tag ein Türchen, ein Spiel und nur ein Versuch.';
+    $('#home-stats').innerHTML = `<span class="chip">${doneList.length}/24 gespielt</span><span class="chip win">✓ ${wins} gewonnen</span><span class="chip lose">✕ ${doneList.length - wins} verloren</span>`;
 
     const box = $('#doors'); box.innerHTML = '';
     for (let d = 1; d <= 24; d++) {
       const r = state.results[d];
       const b = document.createElement('button');
       b.className = 'door';
-      if (r && r.status === 'done') { b.classList.add('done'); b.innerHTML = `${d}<small>${r.win ? '🏆' : '🍬'}</small>`; }
-      else if (!isOpen(d)) { b.classList.add('locked'); b.innerHTML = `${d}<small>🔒</small>`; }
-      else { b.textContent = d; if (d === td) b.classList.add('today'); }
+      if (r && r.status === 'done') { b.classList.add(r.win ? 'won' : 'lost'); b.innerHTML = `<span class="num">${d}</span><span class="mark">${r.win ? '✓' : '✕'}</span>`; }
+      else if (!isOpen(d)) { b.classList.add('locked'); b.innerHTML = `<span class="num">${d}</span><span class="lbl">🔒</span>`; }
+      else { b.classList.add('open'); if (d === td) b.classList.add('today'); b.innerHTML = `<span class="num">${d}</span><span class="lbl">${d === td ? 'Heute' : 'Offen'}</span>`; }
       b.onclick = () => doorClick(d);
       box.appendChild(b);
     }
     // Gewinnliste
     const list = Object.entries(state.results).filter(([, r]) => r.status === 'done').sort((a, b) => a[1].seq - b[1].seq);
     const w = $('#wins');
-    if (!list.length) { w.innerHTML = `<h3>🎁 Deine Preise</h3><p style="margin:0;color:var(--muted)">Noch nichts hier – das erste Türchen wartet!</p>`; }
+    if (!list.length) { w.innerHTML = `<h3>Deine Preise</h3><p class="empty">Noch leer. Das erste Türchen wartet auf dich.</p>`; }
     else {
-      w.innerHTML = '<h3>🎁 Deine Preise</h3><ul>' + list.map(([d, r]) => {
+      w.innerHTML = '<h3>Deine Preise</h3><ul>' + list.map(([d, r]) => {
         const what = r.win ? r.prizes.map(prizeStr).join(' + ') : `🍬 Trostpreis: ${r.cons}`;
-        return `<li><span class="d">${d}.</span><span>${what}</span></li>`;
+        return `<li><span class="d ${r.win ? 'w' : 'l'}">${d}</span><span>${what}</span></li>`;
       }).join('') + '</ul>';
     }
     if (admin) {
@@ -110,8 +114,8 @@
       const dt = opensAt(d);
       return info('🔒', `Türchen ${d}`, `Geduld! Dieses Türchen öffnet sich am ${dt.getDate()}. Dezember.`);
     }
-    if (admin && ASSETS.ok) return intro(d, true);
-    info('📷', `Türchen ${d}`, 'Scanne den QR-Code an deinem Türchen, um das Spiel zu starten.');
+    if (!ASSETS.ok) return info('🔗', 'Fast geschafft', 'Öffne einmal den Link aus deiner Einladung, dann funktioniert alles.');
+    intro(d, admin);
   }
 
   function info(emoji, title, msg) {
@@ -126,11 +130,11 @@
     $('#intro-emoji').textContent = g.emoji;
     $('#intro-title').textContent = g.title;
     $('#intro-rules').textContent = g.rules;
-    $('#intro-goal').textContent = '🎯 ' + g.goal;
+    $('#intro-goal').innerHTML = `<span>Ziel</span>${g.goal}`;
     const stake = currentStake(day);
     $('#intro-stake').innerHTML = (day === 24 && stake.length > 1)
-      ? `Großes Finale! Gewinnst du, bekommst du <b>alle ${stake.length} übrigen Preise</b> 🎁`
-      : `Heute im Topf: <b>${prizeStr(stake[0])}</b><br><span style="color:var(--muted);font-size:13px">Verlierst du, wandert er auf morgen – und du kriegst einen Trostpreis.</span>`;
+      ? `<span class="k">Großes Finale</span><b>Alle ${stake.length} übrigen Preise 🎁</b><small>Gewinnst du heute, gehört dir alles, was noch im Topf ist.</small>`
+      : `<span class="k">Heute im Topf</span><b>${prizeStr(stake[0])}</b><small>Verlierst du, wandert er weiter und du bekommst einen Trostpreis.</small>`;
     $('#btn-start').onclick = () => start(day, test);
     show('intro');
   }
@@ -140,13 +144,15 @@
     show('game');
     document.getElementById('hud-l').textContent = ''; document.getElementById('hud-r').textContent = '';
     document.getElementById('hud-t').textContent = GAMES[day].title;
-    requestAnimationFrame(() => {
+    document.documentElement.classList.add('playing');
+    countdown(() => requestAnimationFrame(() => {
       const api = makeApi(document.getElementById('stage'), (win, msg) => {
+        document.documentElement.classList.remove('playing');
         const r = test ? fakeResult(day, win, msg) : finalize(day, win, msg);
         showResult(day, r, true);
       });
-      countdown(() => GAMES[day].play(api));
-    });
+      GAMES[day].play(api);
+    }));
   }
   function fakeResult(day, win, msg) {
     return win ? { win, msg, kind: 'main', prizes: currentStake(day) } : { win, msg, kind: 'cons', cons: nextConsolation(), missed: currentStake(day) };
@@ -155,6 +161,7 @@
   function showResult(day, r, fresh) {
     $('#res-photo').style.backgroundImage = `url(${photoFor(day + 2)})`;
     $('#res-emoji').textContent = r.win ? '🏆' : '🫶';
+    $('#s-result').classList.toggle('is-win', !!r.win); $('#s-result').classList.toggle('is-lose', !r.win);
     $('#res-title').textContent = r.win ? 'Gewonnen!' : 'Knapp daneben!';
     $('#res-msg').textContent = r.win ? `Türchen ${day} gehört dir, ${C.herName}!` : (r.msg ? r.msg + '. ' : '') + 'Aber leer gehst du nicht aus:';
     const pb = $('#res-prize');
@@ -189,7 +196,7 @@
   // ---------- Start ----------
   async function boot() {
     ['#btn-home1', '#btn-home2', '#btn-home3'].forEach(s => $(s).onclick = () => { history.replaceState(null, '', location.pathname); renderHome(); });
-    // Schlüssel aus dem QR-Link (#k=…) übernehmen und auf dem Gerät merken
+    // Schlüssel aus dem Einladungslink (#…) übernehmen und auf dem Gerät merken
     // Link-Format: …/?TOKEN#SCHLÜSSEL  (alte Form ?t=…#k=… geht auch)
     const hraw = location.hash.slice(1);
     const hk = hraw ? (new URLSearchParams(hraw).get('k') || (hraw.includes('=') ? null : hraw)) : null;
@@ -203,12 +210,13 @@
 
     const ok = await loadAssets(key);
     document.body.classList.toggle('nokey', !ok);
-    const tok = params.get('t') || [...params.keys()].find(k => C.tokens[k]);
-    const day = tok ? C.tokens[tok] : 0;
+    const toks = C.tokens || {};
+    const tok = params.get('t') || [...params.keys()].find(k => toks[k]);
+    const day = tok ? toks[tok] : 0;
     if (!day) return renderHome();
     const r = state.results[day];
     if (r && r.status === 'done' && !admin) return showResult(day, r, false);
-    if (!ASSETS.ok) return info('📷', 'Hoppla', 'Bitte scanne den QR-Code direkt mit der Handy-Kamera, damit alles geladen wird.');
+    if (!ASSETS.ok) return info('🔗', 'Fast geschafft', 'Öffne einmal den Link aus deiner Einladung, dann funktioniert alles.');
     if (!isOpen(day)) return info('🔒', `Türchen ${day}`, `Na, neugierig? 😏 Dieses Türchen öffnet sich erst am ${day}. Dezember.`);
     intro(day, admin);
   }

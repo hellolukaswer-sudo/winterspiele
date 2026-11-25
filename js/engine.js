@@ -44,7 +44,7 @@ function makeApi(stage, onEnd) {
   const cv = document.createElement('canvas');
   stage.appendChild(cv);
   const r = stage.getBoundingClientRect();
-  const W = Math.round(r.width), H = Math.round(r.height);
+  const W = Math.round(r.width || window.innerWidth), H = Math.round(r.height || window.innerHeight - 60);
   const dpr = Math.min(window.devicePixelRatio || 1, 2);
   cv.width = W * dpr; cv.height = H * dpr; cv.style.width = W + 'px'; cv.style.height = H + 'px';
   const ctx = cv.getContext('2d');
@@ -122,7 +122,7 @@ function makeApi(stage, onEnd) {
       ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText(ch, 0, size * 0.05); ctx.restore();
     },
     text(s, x, y, size = 20, color = '#fff', align = 'center') {
-      ctx.save(); ctx.font = `600 ${size}px Fredoka, system-ui, sans-serif`; ctx.fillStyle = color; ctx.textAlign = align; ctx.textBaseline = 'middle';
+      ctx.save(); ctx.font = `700 ${size}px 'Plus Jakarta Sans', system-ui, sans-serif`; ctx.fillStyle = color; ctx.textAlign = align; ctx.textBaseline = 'middle';
       ctx.fillText(s, x, y); ctx.restore();
     },
     bg(c1 = '#13392a', c2 = '#081a12') {

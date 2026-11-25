@@ -38,10 +38,8 @@ const CONFIG = {
   // Am 24. gibt's bei Sieg ALLE Preise, die noch im Topf liegen
   finaleTakesAll: true,
 
-  // QR-Token -> Tag  (jedes Türchen hat seinen eigenen, nicht erratbaren Link)
-  tokens: {"WqQ7BQXF": 1, "GFyoD8BQ": 2, "nzLmu2D3": 3, "94F9uyav": 4, "jvYTwU84": 5, "SWsBtbqv": 6, "76QJxq50": 7, "23BJqLoh": 8, "TxsuTkVr": 9, "83xBpkId": 10, "nBDWwMEs": 11, "Mp69SLuK": 12, "Ql5zCwRn": 13, "JMFtUPhF": 14, "pxxZggX0": 15, "x8InlYxy": 16, "Jy2x7wKP": 17, "AHXsIzL8": 18, "1w2rboUt": 19, "y2FZSqz3": 20, "pDON5pfv": 21, "yCdENKAv": 22, "BIupCoIi": 23, "8w423KbV": 24},
 
-  // Fotos liegen nur VERSCHLÜSSELT im Repo (AES-256). Der Schlüssel steckt im QR-Code (#k=…)
+  // Fotos liegen nur VERSCHLÜSSELT im Repo (AES-128). Der Schlüssel steckt im Einladungslink (#…)
   faces: {
     er:  ['img/enc/er1.bin', 'img/enc/er2.bin'],
     sie: ['img/enc/sie1.bin', 'img/enc/sie2.bin', 'img/enc/sie3.bin', 'img/enc/sie4.bin'],

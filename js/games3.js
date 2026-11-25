@@ -129,101 +129,109 @@ GAMES[15] = {
   },
 };
 
-// ---------- 16: Hütchenspiel ----------
+// ---------- 16: Wer ist das? ----------
 GAMES[16] = {
-  title: 'Wo ist Lukas?', emoji: '🎩',
-  rules: 'Lukas versteckt sich unter einem Geschenk. Die Geschenke werden gemischt – folge dem richtigen mit den Augen und tippe es an. 5 Runden, immer schneller. Nur ein Fehler erlaubt.',
-  goal: 'Mindestens 4 von 5 Runden',
+  title: 'Wer ist das?', emoji: '🔎',
+  rules: 'Ein Gesichts-Ausschnitt taucht auf: Ist das Lukas oder du? Tippe unten auf den richtigen Namen, bevor der Ring abläuft. Mit jeder Runde wird der Ausschnitt kleiner und die Zeit knapper. 3 Fehler und es ist vorbei.',
+  goal: '25 richtig erkennen',
   play(api) {
-    const ROUNDS = 5;
+    const GOAL = 25, MAXF = 3;
     const { ctx, W, H } = api;
-    const n = 3, slotX = i => W * (0.2 + 0.3 * i), Y = H * 0.5, S = Math.min(70, W * 0.18);
-    let pos = [0, 1, 2]; // pos[box] = slot
-    let hidden = 0, phase = 'show', round = 0, right = 0, wrong = 0, anim = null, swapsLeft = 0, swapDur = 0.4, phaseT = 0, reveal = -1;
-    const face = api.face('er');
-    const upd = () => api.hud(`Runde ${Math.min(round + 1, ROUNDS)}/${ROUNDS}`, `✅ ${right}  ❌ ${wrong}`);
-    const startRound = () => { hidden = rndi(0, 2); phase = 'show'; phaseT = 1.2; swapsLeft = 5 + round * 2; swapDur = Math.max(0.17, 0.42 - round * 0.06); reveal = -1; upd(); };
-    const boxXY = b => {
-      if (anim && (anim.a === b || anim.b === b)) {
-        const k = anim.t / anim.d, e = k < .5 ? 2 * k * k : 1 - Math.pow(-2 * k + 2, 2) / 2;
-        const from = anim.a === b ? anim.sa : anim.sb, to = anim.a === b ? anim.sb : anim.sa;
-        const x = slotX(from) + (slotX(to) - slotX(from)) * e, y = Y + Math.sin(e * Math.PI) * 50 * (anim.a === b ? -1 : 1);
-        return [x, y];
-      }
-      return [slotX(pos[b]), Y];
+    const R = Math.min(W * 0.36, H * 0.25), cx = W / 2, cy = H * 0.38;
+    const bh = 92, by = H - bh - 22, bw = (W - 48) / 2;
+    const btns = [{ who: 'er', x: 16, label: CONFIG.himName }, { who: 'sie', x: 32 + bw, label: CONFIG.herName }];
+    let ok = 0, fails = 0, cur = null, left = 0, fb = null;
+    const next = () => {
+      const who = Math.random() < 0.5 ? 'er' : 'sie';
+      const zoom = 1.15 + Math.min(2.4, ok * 0.11);
+      const span = 0.5 - 0.5 / zoom;
+      cur = { who, img: api.face(who), zoom, fx: 0.5 + rnd(-span, span) * 0.8, fy: 0.5 + rnd(-span, span) * 0.8, mirror: ok > 8 && Math.random() < 0.5 };
+      cur.max = left = Math.max(0.95, 2.4 - ok * 0.06);
     };
-    api.on('down', (x, y) => {
-      if (phase !== 'pick') return;
-      for (let b = 0; b < n; b++) { const [bx, by] = boxXY(b); if (Math.abs(x - bx) < S && Math.abs(y - by) < S * 1.2) {
-        reveal = b; phase = 'result'; phaseT = 1.1;
-        if (b === hidden) right++; else wrong++;
-        upd(); return;
-      } }
-    });
-    startRound();
+    const upd = () => api.hud(`✓ ${ok}/${GOAL}`, '❤️'.repeat(MAXF - fails) + '🤍'.repeat(fails));
+    const answer = who => {
+      if (!cur || fb) return;
+      const right = who === cur.who;
+      fb = { right, t: 0.35, who: cur.who };
+      if (right) ok++; else fails++;
+      upd();
+      if (ok >= GOAL) return api.end(true, 'Ihr kennt euch wirklich gut!');
+      if (fails >= MAXF) return api.end(false, `${ok} von ${GOAL} erkannt`);
+    };
+    api.on('down', (x, y) => { if (y < by - 6) return; for (const b of btns) if (x >= b.x && x <= b.x + bw) answer(b.who); });
+    next(); upd();
     api.loop(dt => {
-      phaseT -= dt;
-      if (phase === 'show' && phaseT <= 0) { phase = 'shuffle'; }
-      if (phase === 'shuffle') {
-        if (!anim) { if (swapsLeft-- <= 0) { phase = 'pick'; } else { let a = rndi(0, 2), b; do b = rndi(0, 2); while (b === a); anim = { a, b, sa: pos[a], sb: pos[b], t: 0, d: swapDur }; } }
-        else { anim.t += dt; if (anim.t >= anim.d) { [pos[anim.a], pos[anim.b]] = [pos[anim.b], pos[anim.a]]; anim = null; } }
+      if (fb) { fb.t -= dt; if (fb.t <= 0) { fb = null; next(); } }
+      else { left -= dt; if (left <= 0) { fb = { right: false, t: 0.45, who: cur.who, slow: true }; fails++; upd(); if (fails >= MAXF) return api.end(false, `${ok} von ${GOAL} erkannt`); } }
+      api.bg('#14324a', '#0a1726');
+      // Bild-Ausschnitt
+      ctx.save(); ctx.beginPath(); ctx.arc(cx, cy, R, 0, 7); ctx.clip();
+      ctx.fillStyle = '#223'; ctx.fillRect(cx - R, cy - R, R * 2, R * 2);
+      if (cur.img) {
+        const iw = cur.img.width, ih = cur.img.height, sw = iw / cur.zoom, sh = ih / cur.zoom;
+        const sx = clamp(cur.fx * iw - sw / 2, 0, iw - sw), sy = clamp(cur.fy * ih - sh / 2, 0, ih - sh);
+        if (cur.mirror) { ctx.translate(cx * 2, 0); ctx.scale(-1, 1); }
+        ctx.drawImage(cur.img, sx, sy, sw, sh, cx - R, cy - R, R * 2, R * 2);
       }
-      if (phase === 'result' && phaseT <= 0) {
-        if (wrong > 1) return api.end(false, `${right} von ${ROUNDS} gefunden`);
-        round++;
-        if (round >= ROUNDS) return api.end(true, `${right} von ${ROUNDS} gefunden`);
-        startRound();
+      ctx.restore();
+      // Zeit-Ring
+      ctx.lineWidth = 8; ctx.lineCap = 'round';
+      ctx.strokeStyle = 'rgba(255,255,255,.12)'; ctx.beginPath(); ctx.arc(cx, cy, R + 12, 0, 7); ctx.stroke();
+      const k = fb ? 0 : clamp(left / cur.max, 0, 1);
+      ctx.strokeStyle = k > 0.35 ? '#f2b84b' : '#e5484d'; ctx.beginPath(); ctx.arc(cx, cy, R + 12, -Math.PI / 2, -Math.PI / 2 + k * Math.PI * 2); ctx.stroke();
+      if (fb) {
+        ctx.strokeStyle = fb.right ? '#22a35a' : '#e5484d'; ctx.lineWidth = 10; ctx.beginPath(); ctx.arc(cx, cy, R + 12, 0, 7); ctx.stroke();
+        api.text(fb.right ? 'Richtig!' : (fb.slow ? 'Zu langsam!' : `Das war ${fb.who === 'er' ? CONFIG.himName : 'du'}!`), cx, cy + R + 48, 22, fb.right ? '#7ee2a5' : '#ff9a9d');
+      } else api.text('Wer ist das?', cx, cy + R + 48, 20, 'rgba(255,255,255,.7)');
+      // Buttons
+      for (const b of btns) {
+        api.roundRect(b.x, by, bw, bh, 22, b.who === 'er' ? '#2563eb' : '#e5487a');
+        api.drawFace(api.face(b.who, 0), b.x + 40, by + bh / 2, 24, '#fff', 2);
+        api.text(b.label, b.x + 72 + (bw - 72) / 2, by + bh / 2, 19, '#fff');
       }
-      api.bg('#3a1730', '#150811');
-      api.roundRect(16, Y + S * 0.9, W - 32, 14, 7, '#00000055');
-      for (let b = 0; b < n; b++) {
-        const [x, y] = boxXY(b);
-        const open = (phase === 'show') || (phase === 'result' && (b === reveal || b === hidden));
-        if (b === hidden && open) api.drawFace(face, x, y + S * 0.2, S * 0.6, '#f6c453', 3);
-        const lift = open ? S * 1.1 : 0;
-        api.roundRect(x - S * 0.8, y - S * 0.7 - lift, S * 1.6, S * 1.4, 12, ['#d7263d', '#2fbf71', '#3d7dd8'][b % 3]);
-        ctx.fillStyle = '#f6c453'; ctx.fillRect(x - 6, y - S * 0.7 - lift, 12, S * 1.4);
-        api.emoji('🎀', x, y - S * 0.7 - lift, 30);
-        if (phase === 'result' && b === reveal) api.emoji(b === hidden ? '✅' : '❌', x, y - S * 1.9, 30);
-      }
-      const label = phase === 'show' ? 'Merk dir, wo Lukas ist!' : phase === 'shuffle' ? 'Mischen…' : phase === 'pick' ? 'Wo ist er? Tippe!' : '';
-      api.text(label, W / 2, H * 0.17, 24);
     });
   },
 };
 
-// ---------- 17: Farb-Chaos ----------
+// ---------- 17: Passt die Farbe? ----------
 GAMES[17] = {
-  title: 'Farb-Chaos', emoji: '🎨',
-  rules: 'Tippe die FARBE, in der das Wort geschrieben ist – nicht das, was da steht! Beispiel: „ROT“ in blauer Schrift → BLAU. Drei Fehler und es ist vorbei.',
-  goal: '20 richtige in 35 Sekunden',
+  title: 'Passt die Farbe?', emoji: '🎨',
+  rules: 'Ein Farbwort erscheint in einer Schriftfarbe. Passen Wort und Schriftfarbe zusammen? „ROT“ in roter Schrift → JA. „ROT“ in blauer Schrift → NEIN. Antworte so schnell du kannst. Bei 3 Fehlern ist es vorbei.',
+  goal: '22 richtige in 30 Sekunden',
   play(api) {
-    const GOAL = 20, TIME = 35, MAXW = 3;
-    const C = [['ROT', '#e8344a'], ['GRÜN', '#2fbf71'], ['BLAU', '#3d7dd8'], ['GELB', '#f6c453'], ['LILA', '#b05fe0']];
+    const GOAL = 22, TIME = 30, MAXW = 3;
+    const C = [['ROT', '#ef4444'], ['GRÜN', '#22c55e'], ['BLAU', '#3b82f6'], ['GELB', '#facc15'], ['LILA', '#a855f7']];
     const root = api.dom();
-    root.innerHTML = `<div id="w" style="font-size:64px;font-weight:700;margin-bottom:26px;background:#fff1;padding:12px 26px;border-radius:18px"></div><div id="b" style="display:grid;grid-template-columns:1fr 1fr;gap:10px;width:100%;max-width:380px"></div>`;
-    const w = root.querySelector('#w'), bb = root.querySelector('#b');
-    let ok = 0, wrong = 0, ink;
+    root.innerHTML = `
+      <div style="font-size:13px;letter-spacing:.14em;text-transform:uppercase;opacity:.7;font-weight:700">Passt die Schriftfarbe zum Wort?</div>
+      <div id="w" style="font-family:var(--display);font-size:clamp(54px,17vw,84px);font-weight:800;padding:18px 26px;border-radius:24px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);min-width:70%;text-align:center"></div>
+      <div id="fb" style="height:22px;font-size:15px;font-weight:600"></div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;width:100%;max-width:420px">
+        <button class="g-btn" id="no" style="background:#b42d35;font-size:24px;padding:22px 10px">✕ Nein</button>
+        <button class="g-btn" id="yes" style="background:#16774a;font-size:24px;padding:22px 10px">✓ Ja</button>
+      </div>`;
+    const w = root.querySelector('#w'), fbEl = root.querySelector('#fb');
+    let ok = 0, wrong = 0, word, ink;
     const timer = gameTimer(api, TIME, () => api.end(false, `${ok} von ${GOAL} richtig`));
-    const upd = () => api.hud(`✅ ${ok}/${GOAL}  ❌ ${wrong}/${MAXW}`, timer.label());
+    const upd = () => api.hud(`✓ ${ok}/${GOAL}  ✕ ${wrong}/${MAXW}`, timer.label());
     const make = () => {
-      const word = rndi(0, 4); do ink = rndi(0, 4); while (ink === word && Math.random() < 0.85);
+      word = rndi(0, 4);
+      ink = Math.random() < 0.45 ? word : (() => { let i; do i = rndi(0, 4); while (i === word); return i; })();
       w.textContent = C[word][0]; w.style.color = C[ink][1];
-      const opts = shuffle([ink, ...shuffle([0, 1, 2, 3, 4].filter(i => i !== ink)).slice(0, 3)]);
-      bb.innerHTML = '';
-      opts.forEach(i => {
-        const b = document.createElement('button'); b.className = 'btn'; b.style.cssText += ';margin:0;background:#2b2b3a;box-shadow:0 4px 0 #000;font-size:22px';
-        b.style.color = C[pick([0, 1, 2, 3, 4].filter(k => k !== i))][1];
-        b.textContent = C[i][0];
-        b.addEventListener('pointerdown', e => {
-          e.stopPropagation(); if (api.ended) return;
-          if (i === ink) { ok++; if (ok >= GOAL) { upd(); return api.end(true); } }
-          else { wrong++; api.flash('❌', 300); if (wrong >= MAXW) { upd(); return api.end(false, 'Drei Fehler'); } }
-          upd(); make();
-        });
-        bb.appendChild(b);
-      });
     };
+    const answer = yes => {
+      if (api.ended) return;
+      const match = word === ink;
+      if (yes === match) { ok++; fbEl.textContent = ''; if (ok >= GOAL) { upd(); return api.end(true); } }
+      else {
+        wrong++; fbEl.style.color = '#ff9a9d';
+        fbEl.textContent = match ? `Doch! ${C[word][0]} war in ${C[ink][0]}` : `Nein: Wort ${C[word][0]}, Farbe ${C[ink][0]}`;
+        if (wrong >= MAXW) { upd(); return api.end(false, 'Drei Fehler'); }
+      }
+      upd(); make();
+    };
+    root.querySelector('#yes').addEventListener('pointerdown', e => { e.stopPropagation(); answer(true); });
+    root.querySelector('#no').addEventListener('pointerdown', e => { e.stopPropagation(); answer(false); });
     make(); upd();
     api.loop(dt => { timer.tick(dt); upd(); });
   },
