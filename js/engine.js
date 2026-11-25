@@ -8,7 +8,7 @@ function loadImg(src) {
 // Verschlüsselte Bilder entschlüsseln (Datei = 16 Byte IV + AES-256-CBC) und als Blob-URL bereitstellen
 async function decryptTo(url, key, mime) {
   try {
-    const buf = await (await fetch(url)).arrayBuffer();
+    const buf = await (await fetch(url, { cache: 'no-cache' })).arrayBuffer();
     const plain = await crypto.subtle.decrypt({ name: 'AES-CBC', iv: buf.slice(0, 16) }, key, buf.slice(16));
     return URL.createObjectURL(new Blob([plain], { type: mime }));
   } catch (e) { return null; }
