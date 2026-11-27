@@ -39,12 +39,15 @@ const shuffle = a => { a = a.slice(); for (let i = a.length - 1; i > 0; i--) { c
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
 const dist = (ax, ay, bx, by) => Math.hypot(ax - bx, ay - by);
 
-function makeApi(stage, onEnd) {
+// opts.demo = stille Vorschau (keine Eingaben, kein HUD, kein Overlay), opts.w/h = feste Größe
+function makeApi(stage, onEnd, opts = {}) {
+  const demo = !!opts.demo;
   stage.innerHTML = '';
   const cv = document.createElement('canvas');
   stage.appendChild(cv);
+  const snow = document.createElement('div'); snow.className = 'snowfall'; stage.appendChild(snow);
   const r = stage.getBoundingClientRect();
-  const W = Math.round(r.width || window.innerWidth), H = Math.round(r.height || window.innerHeight - 60);
+  const W = Math.round(opts.w || r.width || window.innerWidth), H = Math.round(opts.h || r.height || window.innerHeight - 60);
   const dpr = Math.min(window.devicePixelRatio || 1, 2);
   cv.width = W * dpr; cv.height = H * dpr; cv.style.width = W + 'px'; cv.style.height = H + 'px';
   const ctx = cv.getContext('2d');
@@ -77,11 +80,20 @@ function makeApi(stage, onEnd) {
     if (m) { e.preventDefault(); H_.swipe.forEach(f => f(m)); }
     if (e.key === ' ') { e.preventDefault(); H_.down.forEach(f => f(W / 2, H / 2)); H_.up.forEach(f => f(W / 2, H / 2)); }
   };
-  stage.addEventListener('pointerdown', onDown);
-  stage.addEventListener('pointermove', onMove);
-  window.addEventListener('pointerup', onUp);
-  window.addEventListener('pointercancel', onUp);
-  window.addEventListener('keydown', onKey);
+  if (!demo) {
+    stage.addEventListener('pointerdown', onDown);
+    stage.addEventListener('pointermove', onMove);
+    window.addEventListener('pointerup', onUp);
+    window.addEventListener('pointercancel', onUp);
+    window.addEventListener('keydown', onKey);
+  }
+  const cleanup = () => {
+    ended = true; cancelAnimationFrame(raf);
+    timers.forEach(clearTimeout); intervals.forEach(clearInterval);
+    stage.removeEventListener('pointerdown', onDown); stage.removeEventListener('pointermove', onMove);
+    window.removeEventListener('pointerup', onUp); window.removeEventListener('pointercancel', onUp);
+    window.removeEventListener('keydown', onKey);
+  };
 
   const api = {
     cv, ctx, W, H, stage,
@@ -102,6 +114,7 @@ function makeApi(stage, onEnd) {
     after(ms, fn) { const id = setTimeout(() => { if (!ended) fn(); }, ms); timers.push(id); return id; },
     every(ms, fn) { const id = setInterval(() => { if (!ended) fn(); }, ms); intervals.push(id); return id; },
     hud(l, r, t) {
+      if (demo) return;
       if (l !== undefined) document.getElementById('hud-l').textContent = l;
       if (r !== undefined) document.getElementById('hud-r').textContent = r;
       if (t !== undefined) document.getElementById('hud-t').textContent = t;
@@ -139,12 +152,10 @@ function makeApi(stage, onEnd) {
       o.style.pointerEvents = 'none'; o.style.textShadow = '0 3px 8px #000'; o.textContent = msg; stage.appendChild(o);
       setTimeout(() => o.remove(), ms);
     },
+    kill() { cleanup(); },
     end(win, msg) {
-      if (ended) return; ended = true; cancelAnimationFrame(raf);
-      timers.forEach(clearTimeout); intervals.forEach(clearInterval);
-      stage.removeEventListener('pointerdown', onDown); stage.removeEventListener('pointermove', onMove);
-      window.removeEventListener('pointerup', onUp); window.removeEventListener('pointercancel', onUp);
-      window.removeEventListener('keydown', onKey);
+      if (ended) return; cleanup();
+      if (demo) { onEnd(win, msg); return; }
       if (navigator.vibrate) try { navigator.vibrate(win ? [60, 40, 60] : 250); } catch (e) {}
       const ov = document.getElementById('overlay');
       ov.className = 'overlay pop ' + (win ? 'win' : 'lose');
