@@ -12,7 +12,21 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700;12..96,800&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/style.css?v=6">
+<link rel="stylesheet" href="css/style.css?v=7">
+<script>
+  // Veraltete (gecachte) Seite? Dann frisch laden – Spielstand bleibt erhalten.
+  window.APP_VERSION = 7;
+  (function () {
+    try {
+      fetch('version.json?nc=' + Date.now(), { cache: 'no-store' }).then(function (r) { return r.json(); }).then(function (j) {
+        if (j && j.v && j.v !== window.APP_VERSION && !document.documentElement.classList.contains('playing')) {
+          var p = new URLSearchParams(location.search); if (p.get('v') === String(j.v)) return;
+          p.set('v', j.v); location.replace(location.pathname + '?' + p.toString() + location.hash);
+        }
+      }).catch(function () {});
+    } catch (e) {}
+  })();
+</script>
 </head>
 <body>
 <div id="snow" aria-hidden="true"></div>
@@ -81,12 +95,12 @@
   </div>
 </section>
 
-<script src="js/config.js?v=6"></script>
-<script src="js/engine.js?v=6"></script>
-<script src="js/games1.js?v=6"></script>
-<script src="js/games2.js?v=6"></script>
-<script src="js/games3.js?v=6"></script>
-<script src="js/games4.js?v=6"></script>
-<script src="js/core.js?v=6"></script>
+<script src="js/config.js?v=7"></script>
+<script src="js/engine.js?v=7"></script>
+<script src="js/games1.js?v=7"></script>
+<script src="js/games2.js?v=7"></script>
+<script src="js/games3.js?v=7"></script>
+<script src="js/games4.js?v=7"></script>
+<script src="js/core.js?v=7"></script>
 </body>
 </html>
