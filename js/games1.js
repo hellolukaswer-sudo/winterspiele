@@ -145,7 +145,7 @@ GAMES[3] = {
 
 // ---------- 4: Hau-den-Lukas ----------
 GAMES[4] = {
-  title: 'Küss den Lukas', emoji: '❤️',
+  title: 'Küss den Lukas', emoji: '😘',
   rules: 'Lukas schaut kurz aus den Geschenken raus – tipp ihn schnell an! Aber Finger weg von der Kohle 🪨 – zweimal Kohle und es ist vorbei.',
   goal: '24 Treffer in 30 Sekunden',
   play(api) {
@@ -155,7 +155,7 @@ GAMES[4] = {
     const holes = []; for (let j = 0; j < rows; j++) for (let i = 0; i < cols; i++) holes.push({ x: cw * i + cw / 2, y: 20 + ch * j + ch / 2, item: null });
     let hits = 0, lives = 2, spawnT = 0, elapsed = 0;
     const timer = gameTimer(api, TIME, () => api.end(false, `${hits} von ${GOAL} Treffern`));
-    const upd = () => api.hud(`❤️ ${hits}/${GOAL}`, '❤️'.repeat(lives) + '  ' + timer.label());
+    const upd = () => api.hud(`😘 ${hits}/${GOAL}`, '❤️'.repeat(lives) + '  ' + timer.label());
     api.on('down', (x, y) => {
       for (const h of holes) if (h.item && !h.item.hit && dist(x, y, h.x, h.y) < r * 1.25) {
         h.item.hit = true; h.item.life = Math.min(h.item.life, 0.15);
@@ -183,7 +183,7 @@ GAMES[4] = {
           ctx.save(); ctx.beginPath(); ctx.rect(h.x - r * 1.3, h.y - r * 1.6, r * 2.6, r * 2.5); ctx.clip();
           if (h.item.bad) api.emoji('🪨', h.x, yy, r * 1.7); else api.drawFace(h.item.face, h.x, yy, r, h.item.hit ? '#2fbf71' : '#fff', 3);
           ctx.restore();
-          if (h.item.hit && !h.item.bad) api.emoji('❤️', h.x + r * 0.6, h.y - r * 0.6, r * 0.8);
+          if (h.item.hit && !h.item.bad) api.emoji('💋', h.x + r * 0.6, h.y - r * 0.6, r * 0.8);
         }
         api.roundRect(h.x - r * 1.15, h.y + r * 0.75, r * 2.3, r * 0.75, 8, '#d7263d');
         ctx.fillStyle = '#f6c453'; ctx.fillRect(h.x - 5, h.y + r * 0.75, 10, r * 0.75);
