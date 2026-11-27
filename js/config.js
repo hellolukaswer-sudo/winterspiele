@@ -27,8 +27,8 @@ const CONFIG = {
     buldak:    { e: '🌶️', t: 'Buldak Spicy Ramen' },
     spekulatius:{ e: '🧇', t: 'Premium Spekulatius-Waffeln' },
     edelschoko:{ e: '🍫', t: 'Edel Bio Bitterschokolade' },
-    bubbletea: { e: '🧋', t: 'Gutschein: Bubble Tea', voucher: true },
-    chayviet:  { e: '🍲', t: 'Gutschein: Essen bei Chay Viet', voucher: true },
+    bubbletea: { e: '🧋', t: 'Gutschein: Bubble Tea', voucher: true, wallet: 'wallet/f743f1d6a3490000.pkpass' },
+    chayviet:  { e: '🍲', t: 'Gutschein: Essen bei Bödhi', voucher: true, wallet: 'wallet/2dfa6ab1e59650ad.pkpass' },
   },
 
   // Große Tage (Nikolaus + 2./3./4. Advent + Heiligabend) – fest gebucht

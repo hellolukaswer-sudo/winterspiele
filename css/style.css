@@ -179,3 +179,4 @@ h1,h2,h3{font-family:var(--display);letter-spacing:-.02em;margin:0}
 .door.joker{background:linear-gradient(150deg,#fff6e0,#ffd98a);color:#3a2600;border-color:transparent}
 
 a.btn{text-decoration:none;text-align:center}
+.btn.wallet{background:#000;color:#fff;box-shadow:0 10px 22px rgba(0,0,0,.35)}

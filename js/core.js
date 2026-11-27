@@ -265,7 +265,8 @@
         `<div class="gift-list">${r.gifts.map(id => `<div class="gift"><span class="ge">${gift(id).e}</span><span>${esc(gift(id).t)}</span></div>`).join('')}</div>` +
         vouchers.map((id, k) => voucherHtml(id, day, k)).join('') +
         shareBtn(`🎁 Türchen ${day} geschafft! Ich habe gewonnen: ${names}. Bitte bereitstellen ❤️`, '🎁 Gewinn an Lukas schicken') +
-        vouchers.map(id => `<button class="btn gold" data-v="${id}">💾 ${esc(gift(id).t.replace('Gutschein: ', ''))}-Gutschein speichern</button>`).join('');
+        vouchers.map(id => (gift(id).wallet ? `<a class="btn wallet" href="${gift(id).wallet}"> Zu Apple Wallet hinzufügen</a>` : '') +
+          `<button class="btn gold" data-v="${id}">💾 ${esc(gift(id).t.replace('Gutschein: ', ''))}-Gutschein als Bild speichern</button>`).join('');
       body.querySelectorAll('[data-v]').forEach(b => b.onclick = () => saveVoucher(b.dataset.v, day));
       if (freshWin) confetti();
     } else {
