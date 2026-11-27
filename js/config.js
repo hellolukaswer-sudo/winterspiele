@@ -8,7 +8,7 @@ const CONFIG = {
   whatsapp: '',           // optional: deine Nummer im Format 4917612345678 – dann geht "Gewinn teilen" direkt an dich
 
   // SHA-256 des Admin-Schlüssels (der Schlüssel selbst steht NICHT im Repo)
-  adminHash: '0e9784c2631b8b316e47d4cfd8c1b86df9e14cf557ac612b5e4b5da081459e0e',
+  adminHash: 'b9ee750309021521aac7857f8706973ea03c6dfd6b7771db80ae0073c193c419',
 
   // ---------- Alle Geschenke ----------
   // bar: true = Riegel, die als Erstes wegfallen dürfen, wenn sich zu viel verschiebt
