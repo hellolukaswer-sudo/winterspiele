@@ -5,7 +5,8 @@
   const KEY = 'wk26_state2', ADM = 'wk26_admin', KK = 'wk26_k';
   const params = new URLSearchParams(location.search);
   let admin = false;
-  try { admin = localStorage.getItem(ADM) === C.adminHash; } catch (e) {}
+  // Testmodus gilt nur, solange ?admin=… im Link steht (wird nicht mehr dauerhaft gemerkt)
+  try { localStorage.removeItem(ADM); } catch (e) {}
 
   // Steuerungs-Hinweise für die Vorschau
   const CTRL = {
@@ -188,7 +189,7 @@
     if (admin) {
       const ab = $('#admin-bar'); ab.classList.remove('hidden');
       ab.innerHTML = `🔧 Testmodus: alle Türchen offen, nichts wird gespeichert (Neuladen = Neustart). <button id="adm-off">Testmodus aus</button><button id="adm-reset">Neu anfangen</button>`;
-      $('#adm-off').onclick = () => { try { localStorage.removeItem(ADM); } catch (e) {} location.href = location.pathname; };
+      $('#adm-off').onclick = () => { location.href = location.pathname; };
       $('#adm-reset').onclick = () => { state = fresh(); renderHome(); };
     }
     show('home');
@@ -368,7 +369,7 @@
 
   // ---------- Start ----------
   async function boot() {
-    ['#btn-home1', '#btn-home2', '#btn-home3'].forEach(s => $(s).onclick = () => { history.replaceState(null, '', location.pathname); renderHome(); });
+    ['#btn-home1', '#btn-home2', '#btn-home3'].forEach(s => $(s).onclick = () => renderHome());
     // Schlüssel aus dem Einladungslink (#…) übernehmen und auf dem Gerät merken
     const hraw = location.hash.slice(1);
     const hk = hraw ? (new URLSearchParams(hraw).get('k') || (hraw.includes('=') ? null : hraw)) : null;
@@ -379,8 +380,7 @@
     const ak = params.get('admin');
     if (ak) {
       const h = await sha256(ak);
-      if (h === C.adminHash) { try { localStorage.setItem(ADM, h); } catch (e) {} admin = true; state = fresh(); }
-      history.replaceState(null, '', location.pathname);
+      if (h === C.adminHash) { admin = true; state = fresh(); }
     }
     await loadAssets(key);
     if (admin) window.__wk = { finalize, stakeFor, fresh, get state() { return state; }, set state(s) { state = s; }, showResult, showJoker, renderHome };
