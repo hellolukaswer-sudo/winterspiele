@@ -141,6 +141,7 @@ GAMES[10] = {
     const { ctx, W, H } = api;
     const R = 22; let x = W / 2, y = H * 0.75, tx = x, ty = y, t = 0, spawnT = 0.6;
     const balls = [], face = api.face('sie'), thrower = api.face('er');
+    const deco = api.stage.querySelector('.snowfall'); if (deco) deco.remove(); // Deko-Schnee hier weg, damit man ihn nicht mit Schneebällen verwechselt
     api.on('down', (px, py) => { tx = px; ty = py - 70; });
     api.on('move', (px, py, d) => { if (d) { tx = px; ty = py - 70; } });
     api.loop(dt => {
@@ -163,9 +164,16 @@ GAMES[10] = {
         if (dist(b.x, b.y, x, y) < b.r + R * 0.72) return api.end(false, `Nach ${Math.floor(t)} Sekunden erwischt`);
         if (b.y > H + 20 || b.x < -30 || b.x > W + 30) balls.splice(i, 1);
       }
-      api.bg('#5b7fa8', '#dfe9f5');
-      ctx.globalAlpha = 0.85; api.drawFace(thrower, W / 2, 26, 20, '#fff', 2); ctx.globalAlpha = 1;
-      for (const b of balls) { ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(b.x, b.y, b.r, 0, 7); ctx.fill(); ctx.strokeStyle = '#9bb3cf'; ctx.lineWidth = 1.5; ctx.stroke(); }
+      api.bg('#1e3a6e', '#0d1b38');
+      ctx.fillStyle = '#e8f0fb'; ctx.beginPath(); ctx.ellipse(W / 2, H + 20, W * 0.8, 60, 0, 0, 7); ctx.fill();
+      api.drawFace(thrower, W / 2, 26, 20, '#fff', 2);
+      for (const b of balls) {
+        ctx.fillStyle = 'rgba(0,0,0,.3)'; ctx.beginPath(); ctx.arc(b.x + 3, b.y + 4, b.r, 0, 7); ctx.fill();
+        const g = ctx.createRadialGradient(b.x - b.r * 0.35, b.y - b.r * 0.35, b.r * 0.1, b.x, b.y, b.r);
+        g.addColorStop(0, '#ffffff'); g.addColorStop(0.7, '#f1f5fb'); g.addColorStop(1, '#c9d6e8');
+        ctx.fillStyle = g; ctx.beginPath(); ctx.arc(b.x, b.y, b.r, 0, 7); ctx.fill();
+        ctx.strokeStyle = '#7f95b5'; ctx.lineWidth = 2; ctx.stroke();
+      }
       api.drawFace(face, x, y, R, '#d7263d', 3);
     });
   },
@@ -174,37 +182,48 @@ GAMES[10] = {
 // ---------- 11: Schiebepuzzle ----------
 GAMES[11] = {
   title: 'Foto-Schiebepuzzle', emoji: '🧩',
-  rules: 'Unser Foto ist durcheinander! Tippe ein Teil neben der Lücke an, um es zu verschieben, bis das Bild wieder stimmt. Die Vorlage siehst du oben.',
+  rules: 'Unser Foto ist durcheinander! Tippe auf ein Teil in derselben Reihe oder Spalte wie die Lücke – es rutscht in die Lücke. Bring die Teile in die Reihenfolge 1 bis 8, die Lücke kommt nach unten rechts. Oben siehst du die Vorlage.',
   goal: 'Lösen in 150 Sekunden',
   play(api) {
     const TIME = 150, N = 3;
+    // Quadratischen Ausschnitt aus dem Schutzbrillen-Selfie schneiden (sonst verzerrt)
+    const src = api.photos[7] || api.photos[0];
+    const sq = document.createElement('canvas'); sq.width = sq.height = 600;
+    if (src) {
+      const s = Math.min(src.width, src.height), sx = (src.width - s) / 2, sy = Math.min(src.height - s, src.height * 0.2);
+      sq.getContext('2d').drawImage(src, sx, sy, s, s, 0, 0, 600, 600);
+    }
+    const photo = sq.toDataURL('image/jpeg', 0.85);
     const root = api.dom();
-    const photo = CONFIG.photos[0];
-    const size = Math.min(api.W - 30, api.H - 150), ts = size / N;
-    root.innerHTML = `<div style="width:90px;height:90px;border-radius:10px;background:url(${photo}) center/cover;border:2px solid #fff;opacity:.9"></div><div style="position:relative;width:${size}px;height:${size}px;background:#0006;border-radius:12px"></div>`;
-    const board = root.lastChild;
-    let tiles = [...Array(N * N).keys()]; // Wert = Zielposition, 8 = Lücke
+    const size = Math.floor(Math.min(api.W - 28, api.H - 190)), ts = size / N;
+    root.innerHTML = `<div style="display:flex;align-items:center;gap:12px"><div style="width:96px;height:96px;border-radius:12px;background:url(${photo}) center/cover;border:3px solid #fff;box-shadow:0 6px 14px rgba(0,0,0,.4)"></div><div style="font-size:14px;line-height:1.4;opacity:.85;max-width:180px">So soll es aussehen.<br>Lücke nach unten rechts.</div></div>
+      <div style="position:relative;width:${size}px;height:${size}px;background:rgba(255,255,255,.06);border:2px dashed rgba(255,255,255,.25);border-radius:14px"></div>`;
+    const board = root.lastElementChild;
+    let tiles = [...Array(N * N).keys()]; // tiles[pos] = Teil, N*N-1 = Lücke
     let blank = N * N - 1, prev = -1;
-    for (let k = 0; k < 90 || tiles.every((v, i) => v === i); k++) {
+    for (let k = 0; k < 120 || tiles.every((v, i) => v === i); k++) {
       const bx = blank % N, by = Math.floor(blank / N);
       const nb = [[bx - 1, by], [bx + 1, by], [bx, by - 1], [bx, by + 1]].filter(([a, b]) => a >= 0 && b >= 0 && a < N && b < N).map(([a, b]) => b * N + a).filter(i => i !== prev);
       const m = pick(nb); [tiles[blank], tiles[m]] = [tiles[m], tiles[blank]]; prev = blank; blank = m;
     }
     const els = {};
-    tiles.forEach((v, i) => {
+    tiles.forEach(v => {
       if (v === N * N - 1) return;
       const el = document.createElement('div');
-      el.style.cssText = `position:absolute;width:${ts - 4}px;height:${ts - 4}px;border-radius:8px;background:url(${photo});background-size:${size}px ${size}px;background-position:${-(v % N) * ts}px ${-Math.floor(v / N) * ts}px;transition:left .12s,top .12s;box-shadow:0 2px 6px #0008`;
-      el.addEventListener('pointerdown', e => { e.stopPropagation(); move(v); });
+      el.style.cssText = `position:absolute;width:${ts - 4}px;height:${ts - 4}px;border-radius:10px;background:url(${photo});background-size:${size}px ${size}px;background-position:${-(v % N) * ts}px ${-Math.floor(v / N) * ts}px;transition:left .12s,top .12s;box-shadow:0 3px 8px rgba(0,0,0,.5);border:2px solid rgba(255,255,255,.8)`;
+      el.innerHTML = `<span style="position:absolute;left:5px;top:4px;min-width:22px;height:22px;border-radius:11px;background:rgba(0,0,0,.55);font-size:13px;font-weight:700;display:grid;place-items:center">${v + 1}</span>`;
+      el.addEventListener('pointerdown', e => { e.stopPropagation(); tap(v); });
       board.appendChild(el); els[v] = el;
     });
     const place = () => tiles.forEach((v, i) => { if (els[v]) { els[v].style.left = (i % N) * ts + 2 + 'px'; els[v].style.top = Math.floor(i / N) * ts + 2 + 'px'; } });
     let moves = 0;
-    const move = v => {
+    const tap = v => {
       if (api.ended) return;
       const i = tiles.indexOf(v), bx = blank % N, by = Math.floor(blank / N), ix = i % N, iy = Math.floor(i / N);
-      if (Math.abs(bx - ix) + Math.abs(by - iy) !== 1) return;
-      [tiles[i], tiles[blank]] = [tiles[blank], tiles[i]]; blank = i; moves++; place();
+      if (ix !== bx && iy !== by) return; // nicht in Reihe/Spalte der Lücke
+      const step = ix === bx ? (iy > by ? N : -N) : (ix > bx ? 1 : -1);
+      while (blank !== i) { const nxt = blank + step; [tiles[blank], tiles[nxt]] = [tiles[nxt], tiles[blank]]; blank = nxt; }
+      moves++; place();
       if (tiles.every((t, k) => t === k)) api.end(true, `In ${moves} Zügen gelöst!`);
     };
     place();

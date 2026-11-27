@@ -95,17 +95,25 @@
     state.inserted = ins;
     if (win) {
       if (ids[0] !== '__empty') q.splice(0, ids.length);
+      if (gift(ids[0]).bar) state.barFails = 0;
       state.queue = q;
       const r = { status: 'done', win: true, gifts: ids, msg: msg || '', ts: Date.now(), seq: ++state.seq, joker: !!prev.jokerUsed };
       state.results[day] = r; save(); return r;
     }
-    state.queue = q; // Geschenk bleibt vorne in der Schlange -> nächster Tag
+    // Geschenk bleibt vorne in der Schlange -> nächster Tag.
+    // Ausnahme: Ein Riegel, der zweimal verpasst wurde, fällt weg und das nächste Geschenk rückt nach.
+    let dropped = false;
+    if (ids.length === 1 && gift(ids[0]).bar && q[0] === ids[0]) {
+      state.barFails = (state.barFails || 0) + 1;
+      if (state.barFails >= 2) { q.shift(); state.barFails = 0; dropped = true; }
+    }
+    state.queue = q;
     const out = nextLoss(!!prev.jokerUsed);
     if (out.joker) {
       state.results[day] = { status: 'joker', jokerUsed: true, ts: Date.now(), msg: msg || '' };
       save(); return { joker: true, msg: msg || '', missed: ids };
     }
-    const r = { status: 'done', win: false, loss: out, missed: ids, msg: msg || '', ts: Date.now(), seq: ++state.seq };
+    const r = { status: 'done', win: false, loss: out, missed: ids, dropped, msg: msg || '', ts: Date.now(), seq: ++state.seq };
     state.results[day] = r; save(); return r;
   }
 
@@ -256,20 +264,22 @@
       body.innerHTML =
         `<div class="gift-list">${r.gifts.map(id => `<div class="gift"><span class="ge">${gift(id).e}</span><span>${esc(gift(id).t)}</span></div>`).join('')}</div>` +
         vouchers.map((id, k) => voucherHtml(id, day, k)).join('') +
-        shareBtn(`🎁 Türchen ${day} geschafft! Ich habe gewonnen: ${names}. Bitte bereitstellen 😘`, '🎁 Gewinn an Lukas schicken') +
+        shareBtn(`🎁 Türchen ${day} geschafft! Ich habe gewonnen: ${names}. Bitte bereitstellen ❤️`, '🎁 Gewinn an Lukas schicken') +
         vouchers.map(id => `<button class="btn gold" data-v="${id}">💾 ${esc(gift(id).t.replace('Gutschein: ', ''))}-Gutschein speichern</button>`).join('');
       body.querySelectorAll('[data-v]').forEach(b => b.onclick = () => saveVoucher(b.dataset.v, day));
       if (freshWin) confetti();
     } else {
       const L = r.loss || {};
       const next = (r.missed || []).filter(id => id !== '__empty').map(id => gift(id).t).join(', ');
-      const movedTxt = next ? `<p class="moved">Dein Geschenk (${esc(next)}) wartet beim nächsten Türchen nochmal auf dich.</p>` : '';
+      const movedTxt = !next ? '' : r.dropped
+        ? `<p class="moved">Der ${esc(next)} ist jetzt weg – beim nächsten Türchen wartet dafür ein neues Geschenk auf dich.</p>`
+        : `<p class="moved">Dein Geschenk (${esc(next)}) wartet beim nächsten Türchen nochmal auf dich.</p>`;
       $('#res-emoji').textContent = L.balisto ? '🍫' : '💌';
       $('#res-title').textContent = 'Knapp daneben!';
       $('#res-msg').textContent = r.msg ? r.msg + '.' : '';
       if (L.balisto) {
         body.innerHTML = `<div class="gift-list"><div class="gift"><span class="ge">🍫</span><span>Trostpreis: Balisto</span></div></div>` + movedTxt +
-          shareBtn(`🍫 Türchen ${day}: Heute gab's einen Balisto-Trostpreis für mich. Bitte bereitstellen 😘`, '🍫 Lukas Bescheid geben');
+          shareBtn(`🍫 Türchen ${day}: Heute gab's einen Balisto-Trostpreis für mich. Bitte bereitstellen ❤️`, '🍫 Lukas Bescheid geben');
       } else {
         body.innerHTML = `<div class="letter"><div class="from"><img src="${C.faces.er[0]}" alt="">Nachricht von ${esc(C.himName)}</div><p>${esc(L.text || '')}</p>` +
           (L.punch ? `<button class="btn soft" id="punch-btn">Auflösung zeigen 🥁</button><div class="punch hidden" id="punch">${esc(L.punch)}</div>` : '') + `</div>` + movedTxt;

@@ -96,7 +96,7 @@ GAMES[20] = {
       shots++;
       let hit = false;
       for (let i = targets.length - 1; i >= 0; i--) if (dist(x, y, targets[i].x, targets[i].y) < targets[i].r + 8) {
-        targets.splice(i, 1); hits++; hit = true; marks.push({ x, y, e: '💋', life: 0.6 }); spawn(); break;
+        targets.splice(i, 1); hits++; hit = true; marks.push({ x, y, e: '❤️', life: 0.6 }); spawn(); break;
       }
       if (!hit) marks.push({ x, y, e: '💨', life: 0.4 });
       upd();
@@ -290,7 +290,7 @@ GAMES[23] = {
 
 // ---------- 24: Labyrinth-Finale ----------
 GAMES[24] = {
-  title: 'Weg unterm Mistelzweig', emoji: '💋',
+  title: 'Weg unterm Mistelzweig', emoji: '❤️',
   rules: 'Das große Finale! Finde den Weg durchs Labyrinth zu Lukas unter dem Mistelzweig. Wische in eine Richtung – du rutschst bis zur nächsten Abzweigung. Die Zeit läuft!',
   goal: 'Lukas in 50 Sekunden erreichen',
   play(api) {
@@ -332,13 +332,13 @@ GAMES[24] = {
     const timer = gameTimer(api, TIME, () => api.end(false, 'Die Zeit ist abgelaufen'));
     api.loop(dt => {
       timer.tick(dt); if (api.ended) return;
-      api.hud(timer.label(), '💋 Finde Lukas');
+      api.hud(timer.label(), '❤️ Finde Lukas');
       if (moving) {
         const [tx, ty] = moving.path[moving.i];
         const sp = 16 * dt; rx += clamp(tx - rx, -sp, sp); ry += clamp(ty - ry, -sp, sp);
         if (Math.abs(rx - tx) < 1e-3 && Math.abs(ry - ty) < 1e-3) {
           px = tx; py = ty; moving.i++;
-          if (px === gx && py === gy) return api.end(true, 'Kuss unterm Mistelzweig! 💋');
+          if (px === gx && py === gy) return api.end(true, 'Kuss unterm Mistelzweig! ❤️');
           if (moving.i >= moving.path.length) { const q = moving.queued; moving = null; if (q) go(q); }
         }
       }

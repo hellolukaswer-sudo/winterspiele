@@ -5,14 +5,14 @@
 GAMES[1] = {
   title: 'Liebes-Snake', emoji: '🐍',
   rules: 'Steuere Lukas mit Wischen zu dir. Jedes Mal, wenn er dich erreicht, wird die Schlange länger und schneller. Nicht gegen die Wand oder dich selbst fahren!',
-  goal: '15× einsammeln',
+  goal: '12× einsammeln',
   play(api) {
-    const GOAL = 15, COLS = 14;
+    const GOAL = 12, COLS = 13;
     const { ctx, W, H } = api;
     const cs = Math.floor(W / COLS), ROWS = Math.floor((H - 10) / cs);
     const ox = (W - cs * COLS) / 2, oy = (H - cs * ROWS) / 2;
     let snake = [{ x: 5, y: Math.floor(ROWS / 2) }, { x: 4, y: Math.floor(ROWS / 2) }, { x: 3, y: Math.floor(ROWS / 2) }];
-    let dir = { x: 1, y: 0 }, queue = [], food, eaten = 0, acc = 0, interval = 0.17;
+    let dir = { x: 1, y: 0 }, queue = [], food, eaten = 0, acc = 0, interval = 0.19;
     const herFace = api.face('sie'), hisFace = api.face('er');
     const placeFood = () => { do { food = { x: rndi(0, COLS - 1), y: rndi(0, ROWS - 1) }; } while (snake.some(s => s.x === food.x && s.y === food.y)); };
     placeFood();
@@ -35,7 +35,7 @@ GAMES[1] = {
         if (h.x === food.x && h.y === food.y) {
           eaten++; api.hud(`💛 ${eaten}/${GOAL}`);
           if (eaten >= GOAL) return api.end(true);
-          interval = Math.max(0.085, interval - 0.0065); placeFood();
+          interval = Math.max(0.11, interval - 0.006); placeFood();
         } else snake.pop();
       }
       // zeichnen
@@ -145,7 +145,7 @@ GAMES[3] = {
 
 // ---------- 4: Hau-den-Lukas ----------
 GAMES[4] = {
-  title: 'Küss den Lukas', emoji: '😘',
+  title: 'Küss den Lukas', emoji: '❤️',
   rules: 'Lukas schaut kurz aus den Geschenken raus – tipp ihn schnell an! Aber Finger weg von der Kohle 🪨 – zweimal Kohle und es ist vorbei.',
   goal: '24 Treffer in 30 Sekunden',
   play(api) {
@@ -155,7 +155,7 @@ GAMES[4] = {
     const holes = []; for (let j = 0; j < rows; j++) for (let i = 0; i < cols; i++) holes.push({ x: cw * i + cw / 2, y: 20 + ch * j + ch / 2, item: null });
     let hits = 0, lives = 2, spawnT = 0, elapsed = 0;
     const timer = gameTimer(api, TIME, () => api.end(false, `${hits} von ${GOAL} Treffern`));
-    const upd = () => api.hud(`😘 ${hits}/${GOAL}`, '❤️'.repeat(lives) + '  ' + timer.label());
+    const upd = () => api.hud(`❤️ ${hits}/${GOAL}`, '❤️'.repeat(lives) + '  ' + timer.label());
     api.on('down', (x, y) => {
       for (const h of holes) if (h.item && !h.item.hit && dist(x, y, h.x, h.y) < r * 1.25) {
         h.item.hit = true; h.item.life = Math.min(h.item.life, 0.15);
@@ -183,7 +183,7 @@ GAMES[4] = {
           ctx.save(); ctx.beginPath(); ctx.rect(h.x - r * 1.3, h.y - r * 1.6, r * 2.6, r * 2.5); ctx.clip();
           if (h.item.bad) api.emoji('🪨', h.x, yy, r * 1.7); else api.drawFace(h.item.face, h.x, yy, r, h.item.hit ? '#2fbf71' : '#fff', 3);
           ctx.restore();
-          if (h.item.hit && !h.item.bad) api.emoji('💋', h.x + r * 0.6, h.y - r * 0.6, r * 0.8);
+          if (h.item.hit && !h.item.bad) api.emoji('❤️', h.x + r * 0.6, h.y - r * 0.6, r * 0.8);
         }
         api.roundRect(h.x - r * 1.15, h.y + r * 0.75, r * 2.3, r * 0.75, 8, '#d7263d');
         ctx.fillStyle = '#f6c453'; ctx.fillRect(h.x - 5, h.y + r * 0.75, 10, r * 0.75);

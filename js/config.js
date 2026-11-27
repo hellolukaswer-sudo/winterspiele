@@ -50,7 +50,7 @@ const CONFIG = {
   // ---------- Wenn sie verliert ----------
   // Reihenfolge der Nachrichten. { joker: true } = zweiter Versuch mit Joker-Karte.
   lossMessages: [
-    { text: 'Onjo, leider hat es heute nicht geklappt – aber dein Gewinner wartet trotzdem mit einem Küsschen auf dich, hihi 😘' },
+    { text: 'Onjo, leider hat es heute nicht geklappt – aber dein Gewinner wartet trotzdem mit einem Küsschen auf dich, hihi ❤️' },
     { text: 'Morgen wird es bestimmt besser! Hab heute trotzdem einen wunderschönen Tag. Ich denke ganz doll an dich und hab dich lieb! 💛' },
     { joker: true },
     { text: 'Das war aber auch echt ein schweres Spiel – keine Sorge, morgen hast du nochmal die Chance, etwas zu gewinnen. Ich strenge mich auch jeden Tag an, dich für mich zu gewinnen, weil du mir extrem wichtig bist!!! Ich hoffe, du hast Spaß an deinem kleinen Kalender :)' },
