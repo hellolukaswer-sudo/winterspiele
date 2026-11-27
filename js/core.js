@@ -48,6 +48,9 @@
   // ---------- Geschenke ----------
   const gift = id => C.gifts[id] || C.emptyGift;
   const giftStr = id => `${gift(id).e} ${gift(id).t}`;
+  // gleiche Geschenke zusammenfassen: [{id, n}]
+  const group = ids => { const m = []; for (const id of ids) { const g = m.find(x => x.id === id); if (g) g.n++; else m.push({ id, n: 1 }); } return m; };
+  const groupStr = ids => group(ids).map(({ id, n }) => `${gift(id).e} ${n > 1 ? n + '× ' : ''}${gift(id).t}`);
   const isDone = d => state.results[d] && state.results[d].status === 'done';
   const unplayed = () => { const u = []; for (let d = 1; d <= 24; d++) if (!isDone(d)) u.push(d); return u; };
 
@@ -59,9 +62,16 @@
     const un = unplayed(); if (!un.includes(day)) un.push(day);
     const pending = un.filter(d => d !== day && C.premium[d] && !ins.includes(d)).length;
     const cap = Math.max(1, un.length - pending);
-    while (q.length > cap) {
+    const finale = day === 24 && C.finaleTakesAll; // Heiligabend: alles, was noch übrig ist (auch Riegel)
+    while (!finale && q.length > cap) {
       let i = -1; for (let k = q.length - 1; k >= 0; k--) if (gift(q[k]).bar) { i = k; break; }
       if (i < 0) break; q.splice(i, 1);
+    }
+    if (finale) {
+      // Heiligabend: alle Geschenke, die sie noch nicht gewonnen hat – auch weggefallene Riegel
+      const left = [C.premium[24], ...Object.values(C.premium).filter(id => id !== C.premium[24]), ...Object.keys(C.plan).sort((x, y) => x - y).map(d => C.plan[d])];
+      for (const r of Object.values(state.results)) if (r.status === 'done' && r.win) for (const id of r.gifts) { const i = left.indexOf(id); if (i >= 0) left.splice(i, 1); }
+      return { ids: left.length ? left : ['__empty'], q: [], ins };
     }
     const last = C.finaleTakesAll && un.length === 1; // letztes offenes Türchen bekommt alles
     const ids = q.length ? (last ? q.slice() : [q[0]]) : ['__empty'];
@@ -108,9 +118,14 @@
       if (state.barFails >= 2) { q.shift(); state.barFails = 0; dropped = true; }
     }
     state.queue = q;
+    // Heiligabend: fester Extra-Joker, zusätzlich zu den verteilten
+    if (day === 24 && !prev.finalJoker) {
+      state.results[day] = { status: 'joker', jokerUsed: !!prev.jokerUsed, finalJoker: true, ts: Date.now(), msg: msg || '' };
+      save(); return { joker: true, msg: msg || '', missed: ids };
+    }
     const out = nextLoss(!!prev.jokerUsed);
     if (out.joker) {
-      state.results[day] = { status: 'joker', jokerUsed: true, ts: Date.now(), msg: msg || '' };
+      state.results[day] = { status: 'joker', jokerUsed: true, finalJoker: !!prev.finalJoker, ts: Date.now(), msg: msg || '' };
       save(); return { joker: true, msg: msg || '', missed: ids };
     }
     const r = { status: 'done', win: false, loss: out, missed: ids, dropped, msg: msg || '', ts: Date.now(), seq: ++state.seq };
@@ -167,7 +182,7 @@
     const w = $('#wins');
     if (!list.length) w.innerHTML = `<h3>Deine Geschenke</h3><p class="empty">Noch leer. Das erste Türchen wartet auf dich.</p>`;
     else w.innerHTML = '<h3>Deine Geschenke</h3><ul>' + list.map(([d, r]) => {
-      const what = r.win ? r.gifts.map(giftStr).join(' + ') : (r.loss && r.loss.balisto ? '🍫 Trostpreis: Balisto' : '💌 Nachricht von Lukas');
+      const what = r.win ? groupStr(r.gifts).join(' + ') : (r.loss && r.loss.balisto ? '🍫 Trostpreis: Balisto' : '💌 Nachricht von Lukas');
       return `<li><span class="d ${r.win ? 'w' : 'l'}">${d}</span><span>${esc(what)}</span></li>`;
     }).join('') + '</ul>';
     if (admin) {
@@ -219,7 +234,7 @@
     const { ids } = stakeFor(day);
     const big = C.premium[day] ? '<span class="k">⭐ Großer Tag</span>' : '<span class="k">Heute im Topf</span>';
     $('#intro-stake').innerHTML = ids.length > 1
-      ? `<span class="k">Großes Finale</span><b>${ids.map(id => esc(giftStr(id))).join('<br>')}</b><small>Gewinnst du heute, gehört dir alles davon.</small>`
+      ? `<span class="k">Großes Finale</span><b>${groupStr(ids).map(esc).join('<br>')}</b><small>Gewinnst du heute, gehört dir alles davon.${day === 24 && !(state.results[24] || {}).finalJoker ? ' Und keine Sorge: Heute hast du auf jeden Fall einen Joker.' : ''}</small>`
       : `${big}<b>${esc(giftStr(ids[0]))}</b><small>Schaffst du es nicht, bekommst du eine Nachricht von mir – und das Geschenk wartet beim nächsten Türchen nochmal auf dich.</small>`;
     $('#btn-start').onclick = () => start(day);
     show('intro');
@@ -228,7 +243,7 @@
 
   function start(day) {
     const prev = state.results[day] || {};
-    state.results[day] = { status: 'started', jokerUsed: !!prev.jokerUsed, ts: Date.now() }; save();
+    state.results[day] = { status: 'started', jokerUsed: !!prev.jokerUsed, finalJoker: !!prev.finalJoker, ts: Date.now() }; save();
     show('game');
     $('#hud-l').textContent = ''; $('#hud-r').textContent = ''; $('#hud-t').textContent = GAMES[day].title;
     document.documentElement.classList.add('playing');
@@ -260,9 +275,9 @@
       $('#res-title').textContent = 'Gewonnen!';
       $('#res-msg').textContent = `Türchen ${day} gehört dir, ${C.herName}!`;
       const vouchers = r.gifts.filter(id => gift(id).voucher);
-      const names = r.gifts.map(id => gift(id).t).join(', ');
+      const names = group(r.gifts).map(({ id, n }) => (n > 1 ? n + '× ' : '') + gift(id).t).join(', ');
       body.innerHTML =
-        `<div class="gift-list">${r.gifts.map(id => `<div class="gift"><span class="ge">${gift(id).e}</span><span>${esc(gift(id).t)}</span></div>`).join('')}</div>` +
+        `<div class="gift-list">${group(r.gifts).map(({ id, n }) => `<div class="gift"><span class="ge">${gift(id).e}</span><span>${n > 1 ? n + '× ' : ''}${esc(gift(id).t)}</span></div>`).join('')}</div>` +
         vouchers.map((id, k) => voucherHtml(id, day, k)).join('') +
         shareBtn(`🎁 Türchen ${day} geschafft! Ich habe gewonnen: ${names}. Bitte bereitstellen ❤️`, '🎁 Gewinn an Lukas schicken') +
         vouchers.map(id => (gift(id).wallet ? `<a class="btn wallet" href="${gift(id).wallet}"> Zu Apple Wallet hinzufügen</a>` : '') +
@@ -295,7 +310,9 @@
     const s = $('#s-result'); s.classList.add('is-win'); s.classList.remove('is-lose');
     $('#res-emoji').textContent = '🃏';
     $('#res-title').textContent = 'JOKER-Karte!';
-    $('#res-msg').textContent = 'Weißt du was? WUHUUU – du darfst nochmal probieren. Diesmal aber richtig anstrengen!';
+    $('#res-msg').textContent = day === 24 && !(state.results[day] || {}).jokerUsed
+      ? 'Heiligabend-Joker! 🎄 An Heiligabend lasse ich dich nicht hängen – du darfst nochmal. Alles, was noch im Topf ist, wartet auf dich!'
+      : 'Weißt du was? WUHUUU – du darfst nochmal probieren. Diesmal aber richtig anstrengen!';
     $('#res-body').innerHTML = `<div class="joker"><div class="c tl">J<br>🃏</div><div class="hat">🎅</div><img src="${C.faces.er[1] || C.faces.er[0]}" alt=""><div class="t">JOKER</div><div class="c br">J<br>🃏</div></div>
       <button class="btn big" id="joker-go">Nochmal spielen</button>`;
     $('#joker-go').onclick = () => intro(day);
