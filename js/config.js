@@ -65,10 +65,10 @@ const CONFIG = {
 
   // ---------- Bilder (verschlüsselt, Schlüssel steckt im Einladungslink) ----------
   faces: {
-    er:  ['er1', 'er2', 'er3', 'er4', 'er5', 'er6', 'er7', 'er8'].map(n => `img/enc/${n}.bin`),
-    sie: ['sie1', 'sie2', 'sie3', 'sie4', 'sie5', 'sie6', 'sie7', 'sie8', 'sie9', 'sie10'].map(n => `img/enc/${n}.bin`),
+    er:  ['er9', 'er1', 'er2', 'er3', 'er4', 'er5', 'er6', 'er7', 'er8'].map(n => `img/enc/${n}.bin`),
+    sie: ['sie11', 'sie1', 'sie2', 'sie3', 'sie4', 'sie5', 'sie6', 'sie7', 'sie8', 'sie9', 'sie10'].map(n => `img/enc/${n}.bin`),
   },
-  photos: ['foto6', 'foto7', 'foto1', 'foto10', 'foto8', 'foto2', 'foto11', 'foto9', 'foto4', 'foto3', 'foto5'].map(n => `img/enc/${n}.bin`),
+  photos: ['foto6', 'foto7', 'foto1', 'foto10', 'foto8', 'foto2', 'foto11', 'foto9', 'foto4', 'foto3', 'foto5', 'foto12', 'foto13'].map(n => `img/enc/${n}.bin`),
   // Bildausschnitt (vertikal) pro Foto, gleiche Reihenfolge wie oben
-  photoFocus: ['35%', '28%', '45%', '42%', '30%', '50%', '48%', '40%', '50%', '40%', '45%'],
+  photoFocus: ['35%', '28%', '45%', '42%', '30%', '50%', '48%', '40%', '50%', '40%', '45%', '25%', '22%'],
 };
