@@ -273,7 +273,7 @@ GAMES[23] = {
       for (let i = 0; i < n * n; i++) {
         const c = document.createElement('div');
         c.style.cssText = `width:${s}px;height:${s}px;display:flex;align-items:center;justify-content:center;font-size:${s * 0.7}px;background:#ffffff10;border-radius:10px`;
-        if (isFace) c.innerHTML = `<img src="${i === odd ? CONFIG.faces.sie[0] : CONFIG.faces.er[i % CONFIG.faces.er.length]}" style="width:88%;border-radius:50%">`;
+        if (isFace) c.innerHTML = `<img src="${i === odd ? CONFIG.faces.sie[0] : CONFIG.faces.er[0]}" style="width:88%;border-radius:50%">`;
         else c.textContent = i === odd ? b : a;
         c.addEventListener('pointerdown', e => {
           e.stopPropagation(); if (api.ended) return;
